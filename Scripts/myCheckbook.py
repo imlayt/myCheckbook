@@ -16,6 +16,34 @@ mediumgreen = '#66b3b3'  # color used by PySimpleGUI
 mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 charcoal = '#6a6a6a'
 
+def editwindow(transactiondata, categorylist):
+
+    sg.SetOptions(element_padding=(2, 2))
+
+    layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(transactiondata[0], key='_EWKEY_', disabled=True)],
+              [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='_EWTRANS_')],
+              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='_EWAMOUNT_')],
+              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='_EWDATE_')],
+              [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[4],
+                      key='_EWCATEGORY_', enable_events=True)],
+              [sg.Exit()]
+              ]
+
+
+    editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
+    newcategory = [transactiondata[0]]
+
+    while True:
+        event, values = editwindow.Read()
+        if event is None or event == "Exit":
+            editwindow.Close()
+            break
+        if event == '_EWCATEGORY_':
+            newcategory.append(values['_EWCATEGORY_'])
+            # sg.Popup('_EWCATEGORY_ =>', values['_EWCATEGORY_'], keep_on_top=True)
+
+    return newcategory
+
 
 def createrow(conn, sqlstring, rowdata):
     """
@@ -171,7 +199,7 @@ def db_connection(db_file):
 
 
 def getcategories(conn, tablename):
-    sqlstring = 'SELECT Category, Notes FROM '
+    sqlstring = 'SELECT Category FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
     thecategories = readrows(conn, sql)
@@ -193,6 +221,15 @@ def gettransactions(conn, tablename):
         thetransactions = [list(ele) for ele in thetransactions]
 
     return thetransactions
+
+
+def updatethecategory(conn, thenewcategory, tablename):
+    # 'update TransactionList SET Category = "test category" where Transaction_Id = "20200926_237442"'
+    sqlstr = 'update TransactionList SET Category = ? where Transaction_Id = ?'
+    rowdata =
+    updaterow(conn, sqlstr, rowdata)
+
+
 
 
 def main():
@@ -222,7 +259,7 @@ def main():
     # print('Categories', categorylist)
 
     myheadings = [['Trans_ID'], ['Transaction'], ['Amount'], ['Posted'], ['Category']]
-    categoryheadings = [['Category'], ['Notes']]
+    categoryheadings = [['Category']]
     # print('headings =>', myheadings)
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
@@ -245,8 +282,7 @@ def main():
 
     forecasttab_layout = [[sg.T('forecast tab')]]
 
-    categorytab_layout = [[sg.T('new category tab')],
-                          [sg.Table(categorylist,
+    categorytab_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
                           max_col_width=40,
                           auto_size_columns=True,
@@ -257,8 +293,7 @@ def main():
                           enable_events=True,
                           change_submits=True,
                           bind_return_key=True,
-                          key='_CATEGORYLISTBOX_')]
-                          ]
+                          key='_CATEGORYLISTBOX_')]]
 
     sparetab_layout = [[sg.T('new spare tab')]]
 
@@ -316,7 +351,20 @@ def main():
             # sg.Popup('category table =>', event)
             # sg.Popup('value =>', values['_CATEGORYLISTBOX_'])
             rowid = int(values['_CATEGORYLISTBOX_'][0])
-            sg.Popup('category =>', categorylist[rowid])
+            sg.Popup('category =>', categorylist[rowid][0])
+
+        if event == '_TRANSACTIONLISTBOX_':
+            rowid = int(values['_TRANSACTIONLISTBOX_'][0])
+            # sg.Popup('transaction =>', transactionlist[rowid][0])
+            thenewcategory = editwindow(transactionlist[rowid], categorylist)
+            # sg.Popup('thenewcategory =>', thenewcategory)
+            if len(thenewcategory) > 1:
+                sg.Popup('thenewcategory is =>', thenewcategory[1])
+                updatethecategory(thenewcategory, 'Transactions')
+
+        if event == '_NEWTRANSACTIONLISTBOX_':
+            rowid = int(values['_NEWTRANSACTIONLISTBOX_'][0])
+            sg.Popup('transaction =>', newtransactionlist[rowid][0])
 
 # ##########################################
 # execute the main function
