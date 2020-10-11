@@ -170,34 +170,20 @@ def db_connection(db_file):
         return None
 
 
-def filltransactionlistbox(table, window=None):
+def getcategories(conn, tablename):
+    sqlstring = 'SELECT Category, Notes FROM '
+    sql = sqlstring + tablename + ' ; '
+    # sg.Popup('sql =>', sql)
+    thecategories = readrows(conn, sql)
 
-    global transactionlistbox
-    """
+    # res = [list(ele) for ele in test_list]
+    if thecategories:
+        thecategories = [list(ele) for ele in thecategories]
 
-    :return: company number or None
-    """
-    sqlstr = 'select "Transaction_Id", "Transaction" from ? limit ;'
-    print('sqlstr', sqlstr)
-    try:
-        print('transactionlistbox = table.readrows(sqlstr)')
-        transactionlistbox = table.readrows(sqlstr)
-        # companynumber = companyboxlist[0][1]
-        # print('currentcompany =>', companynumber)
-        print('transactionlistbox =>', transactionlistbox)
-        window.FindElement('_TRANSACTIONLISTBOX_').Update(transactionlistbox)
-        window.FindElement('_TABLE_').Update(transactionlistbox)
-        window.Refresh()
-        return None
-    except:
-        print('fillcompanylistbox FAILED')
-        window.FindElement('_TRANSACTIONLISTBOX_').Update('')
-        window.FindElement('_TABLE_').Update('')
-        return None
-
+    return thecategories
 
 def gettransactions(conn, tablename):
-    sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Balance FROM '
+    sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Category FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
     thetransactions = readrows(conn, sql)
@@ -232,7 +218,11 @@ def main():
     transactionlist = gettransactions(conn,'Transactionlist')
     newtransactionlist = gettransactions(conn,'NewTransactions')
 
-    myheadings = [['Trans_ID'], ['Transaction'], ['Amount'], ['Posted'], ['Balance']]
+    categorylist = getcategories(conn, 'Categories')
+    # print('Categories', categorylist)
+
+    myheadings = [['Trans_ID'], ['Transaction'], ['Amount'], ['Posted'], ['Category']]
+    categoryheadings = [['Category'], ['Notes']]
     # print('headings =>', myheadings)
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
@@ -250,27 +240,30 @@ def main():
                             num_rows=10,
                             enable_events=True,
                             tooltip='New Transactions',
-                            key='_NEWTRANSACTIONLISTBOX_')]]
+                            key='_NEWTRANSACTIONLISTBOX_')],
+                            [sg.Button('Edit Transaction', key='_EDITNEWTRANSACTION_')]]
 
-    forecasttab_layout =  [[sg.T('forecast tab')]]
+    forecasttab_layout = [[sg.T('forecast tab')]]
 
-    categorytab_layout = [[sg.T('new category tab')]]
+    categorytab_layout = [[sg.T('new category tab')],
+                          [sg.Table(categorylist,
+                          headings=categoryheadings,
+                          max_col_width=40,
+                          auto_size_columns=True,
+                          alternating_row_color=lightblue,
+                          justification='left',
+                          display_row_numbers=True,
+                          num_rows=10,
+                          enable_events=True,
+                          change_submits=True,
+                          bind_return_key=True,
+                          key='_CATEGORYLISTBOX_')]
+                          ]
+
     sparetab_layout = [[sg.T('new spare tab')]]
 
-    transactionlistbox_layout = [[sg.T('Transaction List', size=(38, 1),justification='center' )],
-                             [sg.Table(transactionlist,
-                                     headings=myheadings,
-                                     max_col_width=40,
-                                     auto_size_columns=True,
-                                     justification='left',
-                                     display_row_numbers=True,
-                                     num_rows=10,
-                                     enable_events=True,
-                                     key='_TRANSACTIONLISTBOX_')]]
-
-    mainscreenlayout = [[sg.Menu(menu_def, )],
-                        [sg.T('Transaction List', size=(38, 1), justification='center')],
-                         [sg.Table(transactionlist,
+    transactionlistbox_layout = [[sg.Menu(menu_def, )],
+                           [sg.Table(transactionlist,
                             headings=myheadings,
                             max_col_width=40,
                             auto_size_columns=True,
@@ -279,22 +272,32 @@ def main():
                             num_rows=10,
                             enable_events=True,
                             tooltip='Old Transactions',
-                            key='_TRANSACTIONLISTBOX_')],
-                        [sg.TabGroup([[sg.Tab('New Transactions', newtransactionstab_layout,
-                                background_color=mediumgreen)],
-                                      [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
-                                      [sg.Tab('Category', categorytab_layout, background_color='white')],
-                                      [sg.Tab('Spare', sparetab_layout, background_color=mediumgreen2)]
-                                      ],
-                                )],
+                            key='_OLDTRANSACTIONLISTBOX_')],
+                            [sg.Button('Edit Transaction', key='_EDITOLDTRANSACTION_')]]
+
+    mainscreenlayout = [[sg.T('Transaction List', size=(38, 1), justification='center')],
+                        [sg.Menu(menu_def, )],
+                         [sg.Table(transactionlist,
+                                 headings=myheadings,
+                                 max_col_width=40,
+                                 auto_size_columns=True,
+                                 justification='left',
+                                 display_row_numbers=True,
+                                 num_rows=10,
+                                 enable_events=True,
+                                 tooltip='Old Transactions',
+                                 key='_TRANSACTIONLISTBOX_')],
+                         [sg.Button('Edit Transaction', key='_EDITOLDTRANSACTION_')],
+                        [sg.TabGroup([
+                                [sg.Tab('New Transactions', newtransactionstab_layout, background_color=charcoal)],
+                                [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
+                                [sg.Tab('Category', categorytab_layout, background_color=charcoal)],
+                                [sg.Tab('Spare', sparetab_layout, background_color=charcoal)]
+                                ])
+                        ],
                          [sg.InputText('Message Area', size=(110, 1), key='_MESSAGEAREA_', background_color='white')],
                         [sg.Exit()]]
-
-    # read in transactions
-    transactionlist = gettransactions(conn, 'Transactionlist')
-    newtransactionlist = gettransactions(conn, 'newtransactions')
-    # print(transactionlist)
-
+    # sg.Popup('after Mainscreen')
 
     sg.SetOptions(element_padding=(2, 2))
     window = sg.Window('myFinances App', default_element_size=(15, 1), background_color=mediumgreen2).Layout(
@@ -309,10 +312,11 @@ def main():
         if event is None or event == "Exit":
             window.Close()
             sys.exit(0)
-
-
-# fill list boxes
-    #
+        if event == '_CATEGORYLISTBOX_':
+            # sg.Popup('category table =>', event)
+            # sg.Popup('value =>', values['_CATEGORYLISTBOX_'])
+            rowid = int(values['_CATEGORYLISTBOX_'][0])
+            sg.Popup('category =>', categorylist[rowid])
 
 # ##########################################
 # execute the main function
