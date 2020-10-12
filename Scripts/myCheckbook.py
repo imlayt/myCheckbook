@@ -21,28 +21,29 @@ def editwindow(transactiondata, categorylist):
     sg.SetOptions(element_padding=(2, 2))
 
     layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(transactiondata[0], key='_EWKEY_', disabled=True)],
-              [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='_EWTRANS_')],
-              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='_EWAMOUNT_')],
-              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='_EWDATE_')],
+              [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='_EWTRANS_', disabled=True)],
+              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='_EWAMOUNT_', disabled=True)],
+              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='_EWDATE_', disabled=True)],
               [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[4],
                       key='_EWCATEGORY_', enable_events=True)],
-              [sg.Exit()]
-              ]
-
-
+              [sg.Exit(), sg.Button('Save', key='_EWSAVE_')]]
+    # print('categorylist =>', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
-    newcategory = [transactiondata[0]]
+    newcategory = str(transactiondata[0])
+    newcat = ['', '']
 
     while True:
         event, values = editwindow.Read()
         if event is None or event == "Exit":
             editwindow.Close()
             break
-        if event == '_EWCATEGORY_':
-            newcategory.append(values['_EWCATEGORY_'])
+
+        if event == '_EWSAVE_':
+            newcat = values['_EWCATEGORY_']
+            newcat.append(newcategory)
             # sg.Popup('_EWCATEGORY_ =>', values['_EWCATEGORY_'], keep_on_top=True)
 
-    return newcategory
+    return newcat
 
 
 def createrow(conn, sqlstring, rowdata):
@@ -111,9 +112,10 @@ def updaterow(conn, sqlstring, rowdata):
         curr = conn.cursor()
         # print('curr creation succeeded')
         # print('sqlstring =>', sqlstring)
+        # print('rowdata =>', rowdata)
         curr.execute(sqlstring, rowdata)
         # commit the changes
-        self.conn.commit()
+        conn.commit()
         # print('curr.execute succeeded')
         return True
     except Error as e:
@@ -223,12 +225,12 @@ def gettransactions(conn, tablename):
     return thetransactions
 
 
-def updatethecategory(conn, thenewcategory, tablename):
+def updatethecategory(conn, thenewcategory):
     # 'update TransactionList SET Category = "test category" where Transaction_Id = "20200926_237442"'
-    sqlstr = 'update TransactionList SET Category = ? where Transaction_Id = ?'
-    rowdata =
-    updaterow(conn, sqlstr, rowdata)
-
+    if thenewcategory[0] != '':
+        sqlstr = 'update TransactionList SET Category = ? where Transaction_Id = ?'
+        updaterow(conn, sqlstr, thenewcategory)
+        gettransactions(conn, 'Transactionlist')
 
 
 
@@ -359,12 +361,16 @@ def main():
             thenewcategory = editwindow(transactionlist[rowid], categorylist)
             # sg.Popup('thenewcategory =>', thenewcategory)
             if len(thenewcategory) > 1:
-                sg.Popup('thenewcategory is =>', thenewcategory[1])
-                updatethecategory(thenewcategory, 'Transactions')
+                # sg.Popup('thenewcategory is =>', thenewcategory[1])
+                updatethecategory(conn, thenewcategory)
+                categorylist = getcategories(conn, 'Categories')
+                transactionlist = gettransactions(conn, 'Transactionlist')
+                window.FindElement('_TRANSACTIONLISTBOX_').Update(transactionlist)
+                window.Refresh()
 
         if event == '_NEWTRANSACTIONLISTBOX_':
             rowid = int(values['_NEWTRANSACTIONLISTBOX_'][0])
-            sg.Popup('transaction =>', newtransactionlist[rowid][0])
+            # sg.Popup('transaction =>', newtransactionlist[rowid][0])
 
 # ##########################################
 # execute the main function
