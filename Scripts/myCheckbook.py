@@ -5,7 +5,7 @@ import os
 import sys
 from datetime import datetime
 
-my_db_file = 'C:/Users/imlay/Downloads/myFinances_appdata.db'
+my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
 # my_db_file = 'myFinances-AppData.db'
 # my_db_file = ''
 
@@ -29,7 +29,7 @@ def editwindow(transactiondata, categorylist):
               [sg.Exit(), sg.Button('Save', key='_EWSAVE_')]]
     # print('categorylist =>', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
-    newcategory = str(transactiondata[0])
+    primarykey = str(transactiondata[0])
     newcat = ['', '']
 
     while True:
@@ -40,8 +40,10 @@ def editwindow(transactiondata, categorylist):
 
         if event == '_EWSAVE_':
             newcat = values['_EWCATEGORY_']
-            newcat.append(newcategory)
+            newcat.append(primarykey)
             # sg.Popup('_EWCATEGORY_ =>', values['_EWCATEGORY_'], keep_on_top=True)
+            editwindow.Close()
+            break
 
     return newcat
 
@@ -200,8 +202,20 @@ def db_connection(db_file):
         return None
 
 
-def getcategories(conn, tablename):
+def ewgetcategories(conn, tablename):
     sqlstring = 'SELECT Category FROM '
+    sql = sqlstring + tablename + ' ; '
+    # sg.Popup('sql =>', sql)
+    thecategories = readrows(conn, sql)
+
+    # res = [list(ele) for ele in test_list]
+    if thecategories:
+        thecategories = [list(ele) for ele in thecategories]
+
+    return thecategories
+
+def getcategories(conn, tablename):
+    sqlstring = 'SELECT * FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
     thecategories = readrows(conn, sql)
@@ -214,7 +228,7 @@ def getcategories(conn, tablename):
 
 def gettransactions(conn, tablename):
     sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Category FROM '
-    sql = sqlstring + tablename + ' ; '
+    sql = sqlstring + tablename + ' ORDER BY Transaction_Id ; '
     # sg.Popup('sql =>', sql)
     thetransactions = readrows(conn, sql)
 
@@ -258,10 +272,14 @@ def main():
     newtransactionlist = gettransactions(conn,'NewTransactions')
 
     categorylist = getcategories(conn, 'Categories')
+    ewcategorylist = ewgetcategories(conn, 'Categories')
+    catid = '0'
+    cat = ''
+    catnotes = ''
     # print('Categories', categorylist)
 
     myheadings = [['Trans_ID'], ['Transaction'], ['Amount'], ['Posted'], ['Category']]
-    categoryheadings = [['Category']]
+    categoryheadings = [['ID'], ['Category'], ['Notes']]
     # print('headings =>', myheadings)
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
@@ -284,18 +302,24 @@ def main():
 
     forecasttab_layout = [[sg.T('forecast tab')]]
 
-    categorytab_layout = [[sg.Table(categorylist,
+    categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
                           max_col_width=40,
                           auto_size_columns=True,
                           alternating_row_color=lightblue,
                           justification='left',
-                          display_row_numbers=True,
+                          display_row_numbers=False,
                           num_rows=10,
                           enable_events=True,
                           change_submits=True,
                           bind_return_key=True,
                           key='_CATEGORYLISTBOX_')]]
+
+    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='_CATID_')],
+                              [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='_CAT_')],
+                              [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='_CATNOTES_')]]
+
+    categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
     sparetab_layout = [[sg.T('new spare tab')]]
 
@@ -324,11 +348,10 @@ def main():
                                  enable_events=True,
                                  tooltip='Old Transactions',
                                  key='_TRANSACTIONLISTBOX_')],
-                         [sg.Button('Edit Transaction', key='_EDITOLDTRANSACTION_')],
                         [sg.TabGroup([
                                 [sg.Tab('New Transactions', newtransactionstab_layout, background_color=charcoal)],
                                 [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
-                                [sg.Tab('Category', categorytab_layout, background_color=charcoal)],
+                                [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
                                 [sg.Tab('Spare', sparetab_layout, background_color=charcoal)]
                                 ])
                         ],
@@ -353,17 +376,21 @@ def main():
             # sg.Popup('category table =>', event)
             # sg.Popup('value =>', values['_CATEGORYLISTBOX_'])
             rowid = int(values['_CATEGORYLISTBOX_'][0])
-            sg.Popup('category =>', categorylist[rowid][0])
+            # sg.Popup('category =>', categorylist[rowid][1])
+            window.find_element('_CATID_').update(categorylist[rowid][0])
+            window.find_element('_CAT_').update(categorylist[rowid][1])
+            window.find_element('_CATNOTES_').update(categorylist[rowid][2])
+            window.Refresh()
 
         if event == '_TRANSACTIONLISTBOX_':
             rowid = int(values['_TRANSACTIONLISTBOX_'][0])
             # sg.Popup('transaction =>', transactionlist[rowid][0])
-            thenewcategory = editwindow(transactionlist[rowid], categorylist)
+            thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
             # sg.Popup('thenewcategory =>', thenewcategory)
             if len(thenewcategory) > 1:
                 # sg.Popup('thenewcategory is =>', thenewcategory[1])
                 updatethecategory(conn, thenewcategory)
-                categorylist = getcategories(conn, 'Categories')
+                ewcategorylist = ewgetcategories(conn, 'Categories')
                 transactionlist = gettransactions(conn, 'Transactionlist')
                 window.FindElement('_TRANSACTIONLISTBOX_').Update(transactionlist)
                 window.Refresh()
