@@ -20,13 +20,13 @@ def editwindow(transactiondata, categorylist):
 
     sg.SetOptions(element_padding=(2, 2))
 
-    layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(transactiondata[0], key='_EWKEY_', disabled=True)],
-              [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='_EWTRANS_', disabled=True)],
-              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='_EWAMOUNT_', disabled=True)],
-              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='_EWDATE_', disabled=True)],
+    layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(transactiondata[0], key='-EWKEY-', disabled=True)],
+              [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='-EWTRANS-', disabled=True)],
+              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='-EWAMOUNT-', disabled=True)],
+              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='-EWDATE-', disabled=True)],
               [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[4],
-                      key='_EWCATEGORY_', enable_events=True)],
-              [sg.Exit(), sg.Button('Save', key='_EWSAVE_')]]
+                      key='-EWCATEGORY-', enable_events=True)],
+              [sg.Exit(), sg.Button('Save', key='-EWSAVE-')]]
     # print('categorylist =>', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
     primarykey = str(transactiondata[0])
@@ -38,10 +38,10 @@ def editwindow(transactiondata, categorylist):
             editwindow.Close()
             break
 
-        if event == '_EWSAVE_':
-            newcat = values['_EWCATEGORY_']
+        if event == '-EWSAVE-':
+            newcat = values['-EWCATEGORY-']
             newcat.append(primarykey)
-            # sg.Popup('_EWCATEGORY_ =>', values['_EWCATEGORY_'], keep_on_top=True)
+            # sg.Popup('-EWCATEGORY_ =>', values['-EWCATEGORY-'], keep_on_top=True)
             editwindow.Close()
             break
 
@@ -123,6 +123,7 @@ def updaterow(conn, sqlstring, rowdata):
     except Error as e:
         print(e)
         print('update entry FAILED(', rowdata, ')')
+        print('sqlstring =>', sqlstring)
         return False
 
 
@@ -183,7 +184,7 @@ def setmessage(message, window):
     :return:
     """
     print('new message => ', message)
-    window.FindElement('_MESSAGEAREA_').Update(message)
+    window.FindElement('-MESSAGEAREA-').Update(message)
     window.Refresh()
 
 
@@ -239,13 +240,31 @@ def gettransactions(conn, tablename):
     return thetransactions
 
 
-def updatethecategory(conn, thenewcategory):
+def transupdatethecategory(conn, thenewcategory):
     # 'update TransactionList SET Category = "test category" where Transaction_Id = "20200926_237442"'
     if thenewcategory[0] != '':
         sqlstr = 'update TransactionList SET Category = ? where Transaction_Id = ?'
         updaterow(conn, sqlstr, thenewcategory)
         gettransactions(conn, 'Transactionlist')
 
+
+def catupdatethecategory(conn, catcategory):
+    # catcategory = [ id, cat, note]
+    if catcategory[0] != '':
+        # sqlstr = 'update Categories SET Category = ? where Transaction_Id = ?'
+        sqlstr = """
+        UPDATE Categories SET 
+        Category = ?,
+        Notes = ?
+        WHERE ID = ?
+        """
+        updaterow(conn, sqlstr, catcategory)
+
+
+def catcreaterow(conn, catcategory):
+    if catcategory[0] != '':
+        sqlstr = 'INSERT INTO Categories ( Category, Notes ) VALUES(?, ?)'
+        createrow(conn, sqlstr, catcategory)
 
 
 def main():
@@ -297,8 +316,8 @@ def main():
                             num_rows=10,
                             enable_events=True,
                             tooltip='New Transactions',
-                            key='_NEWTRANSACTIONLISTBOX_')],
-                            [sg.Button('Edit Transaction', key='_EDITNEWTRANSACTION_')]]
+                            key='-NEWTRANSACTIONLISTBOX-')],
+                            [sg.Button('Edit Transaction', key='-EDITNEWTRANSACTION-')]]
 
     forecasttab_layout = [[sg.T('forecast tab')]]
 
@@ -313,11 +332,12 @@ def main():
                           enable_events=True,
                           change_submits=True,
                           bind_return_key=True,
-                          key='_CATEGORYLISTBOX_')]]
+                          key='-CATEGORYLISTBOX-')]]
 
-    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='_CATID_')],
-                              [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='_CAT_')],
-                              [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='_CATNOTES_')]]
+    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='-CATID-')],
+                              [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='-CAT-')],
+                              [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='-CATNOTES-')],
+                              [sg.Button('Save Changes', key='-CATSAVECHANGES-'), sg.Button('New', key='-CATNEW-')]]
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
@@ -333,8 +353,8 @@ def main():
                             num_rows=10,
                             enable_events=True,
                             tooltip='Old Transactions',
-                            key='_OLDTRANSACTIONLISTBOX_')],
-                            [sg.Button('Edit Transaction', key='_EDITOLDTRANSACTION_')]]
+                            key='-OLDTRANSACTIONLISTBOX-')],
+                            [sg.Button('Edit Transaction', key='-EDITOLDTRANSACTION-')]]
 
     mainscreenlayout = [[sg.T('Transaction List', size=(38, 1), justification='center')],
                         [sg.Menu(menu_def, )],
@@ -347,7 +367,7 @@ def main():
                                  num_rows=10,
                                  enable_events=True,
                                  tooltip='Old Transactions',
-                                 key='_TRANSACTIONLISTBOX_')],
+                                 key='-TRANSACTIONLISTBOX-')],
                         [sg.TabGroup([
                                 [sg.Tab('New Transactions', newtransactionstab_layout, background_color=charcoal)],
                                 [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
@@ -355,7 +375,7 @@ def main():
                                 [sg.Tab('Spare', sparetab_layout, background_color=charcoal)]
                                 ])
                         ],
-                         [sg.InputText('Message Area', size=(110, 1), key='_MESSAGEAREA_', background_color='white')],
+                         [sg.InputText('Message Area', size=(110, 1), key='-MESSAGEAREA-', background_color='white')],
                         [sg.Exit()]]
     # sg.Popup('after Mainscreen')
 
@@ -372,32 +392,50 @@ def main():
         if event is None or event == "Exit":
             window.Close()
             sys.exit(0)
-        if event == '_CATEGORYLISTBOX_':
+
+        elif event == '-CATEGORYLISTBOX-':
             # sg.Popup('category table =>', event)
-            # sg.Popup('value =>', values['_CATEGORYLISTBOX_'])
-            rowid = int(values['_CATEGORYLISTBOX_'][0])
+            # sg.Popup('value =>', values['-CATEGORYLISTBOX-'])
+            rowid = int(values['-CATEGORYLISTBOX-'][0])
             # sg.Popup('category =>', categorylist[rowid][1])
-            window.find_element('_CATID_').update(categorylist[rowid][0])
-            window.find_element('_CAT_').update(categorylist[rowid][1])
-            window.find_element('_CATNOTES_').update(categorylist[rowid][2])
+            window.find_element('-CATID-').update(categorylist[rowid][0])
+            window.find_element('-CAT-').update(categorylist[rowid][1])
+            window.find_element('-CATNOTES-').update(categorylist[rowid][2])
             window.Refresh()
 
-        if event == '_TRANSACTIONLISTBOX_':
-            rowid = int(values['_TRANSACTIONLISTBOX_'][0])
+        elif event == '-TRANSACTIONLISTBOX-':
+            rowid = int(values['-TRANSACTIONLISTBOX-'][0])
             # sg.Popup('transaction =>', transactionlist[rowid][0])
             thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
             # sg.Popup('thenewcategory =>', thenewcategory)
             if len(thenewcategory) > 1:
                 # sg.Popup('thenewcategory is =>', thenewcategory[1])
-                updatethecategory(conn, thenewcategory)
+                transupdatethecategory(conn, thenewcategory)
                 ewcategorylist = ewgetcategories(conn, 'Categories')
                 transactionlist = gettransactions(conn, 'Transactionlist')
-                window.FindElement('_TRANSACTIONLISTBOX_').Update(transactionlist)
+                window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
                 window.Refresh()
 
-        if event == '_NEWTRANSACTIONLISTBOX_':
-            rowid = int(values['_NEWTRANSACTIONLISTBOX_'][0])
+        elif event == '-NEWTRANSACTIONLISTBOX-':
+            rowid = int(values['-NEWTRANSACTIONLISTBOX-'][0])
             # sg.Popup('transaction =>', newtransactionlist[rowid][0])
+            
+        elif event == '-CATSAVECHANGES-':
+            catcategory = list()
+            catcategory.append(values['-CAT-'])
+            catcategory.append(values['-CATNOTES-'])
+            catcategory.append(values['-CATID-'])
+            # print('catcategory =>', catcategory)
+            catupdatethecategory(conn,catcategory)
+        
+        elif event == '-CATNEW-':
+            catcategory = list()
+            catcategory.append(values['-CAT-'])
+            catcategory.append(values['-CATNOTES-'])
+            # print('catcategory =>', catcategory)
+            catcreaterow(conn, catcategory)
+        
+        
 
 # ##########################################
 # execute the main function
