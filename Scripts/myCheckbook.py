@@ -334,7 +334,7 @@ def main():
                           bind_return_key=True,
                           key='-CATEGORYLISTBOX-')]]
 
-    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='-CATID-')],
+    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='-CATID-', disabled=True)],
                               [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='-CAT-')],
                               [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='-CATNOTES-')],
                               [sg.Button('Save Changes', key='-CATSAVECHANGES-'), sg.Button('New', key='-CATNEW-')]]
