@@ -304,6 +304,7 @@ def gettablenames(conn):
     # sg.Popup('sqloutput=>', sqloutput)
     return sqloutput
 
+
 def catcreaterow(conn, catcategory):
     if catcategory[0] != '':
         sqlstr = 'INSERT INTO Categories ( Category, Notes ) VALUES(?, ?)'
@@ -484,7 +485,12 @@ def main():
         elif event == '-NEWT-':
             print('NEWT')
             newrecordcount = getnewtransactions(conn, 'Transactionlist')
-            sg.Popup('new rec count =>', newrecordcount)
+            messagetxt = []
+            messagetxt.append ('new rec count => ')
+            messagetxt.append( newrecordcount)
+            setmessage(messagetxt, window )
+            transactionlist = gettransactions(conn, 'Transactionlist')
+            window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
 
         elif event == '-NEWTABLELIST-':
             tablelist = gettablenames(conn)
