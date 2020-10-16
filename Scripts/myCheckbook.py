@@ -29,8 +29,8 @@ def editwindow(transactiondata, categorylist):
               [sg.Exit(), sg.Button('Save', key='-EWSAVE-')]]
     # print('categorylist =>', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
-    primarykey = str(transactiondata[0])
-    newcat = ['', '']
+    transactionkey = str(transactiondata[0])
+    newcat = []
 
     while True:
         event, values = editwindow.Read()
@@ -39,13 +39,41 @@ def editwindow(transactiondata, categorylist):
             break
 
         if event == '-EWSAVE-':
-            newcat = values['-EWCATEGORY-']
-            newcat.append(primarykey)
-            # sg.Popup('-EWCATEGORY_ =>', values['-EWCATEGORY-'], keep_on_top=True)
+            newcat.append(values['-EWCATEGORY-'][0])
+            newcat.append(transactionkey)
+            # sg.Popup('-EWCATEGORY_ =>', newcat, keep_on_top=True)
             editwindow.Close()
             break
 
     return newcat
+
+
+def runsql(conn, sqlstring, rowdata=None):
+    """
+
+    :param conn:
+    :param sqlstring:
+    :param rowdata:
+    :return: True if successful  else False
+    """
+
+    try:
+        curr = conn.cursor()
+        # print('curr creation succeeded')
+        # print('sqlstring =>', sqlstring)
+        if rowdata:
+            curr.execute(sqlstring, rowdata)
+        else:
+            curr.execute(sqlstring)
+        # commit the changes
+        conn.commit()
+        # print('commit succeeded')
+        sqloutput = curr.fetchall()
+        return sqloutput
+    except Error as e:
+        print(e)
+        print('runsql FAILED(', rowdata, ')')
+        return False
 
 
 def createrow(conn, sqlstring, rowdata):
@@ -204,7 +232,7 @@ def db_connection(db_file):
 
 
 def ewgetcategories(conn, tablename):
-    sqlstring = 'SELECT Category FROM '
+    sqlstring = 'SELECT Category, Notes FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
     thecategories = readrows(conn, sql)
@@ -261,6 +289,21 @@ def catupdatethecategory(conn, catcategory):
         updaterow(conn, sqlstr, catcategory)
 
 
+def getnewtransactions(conn, tablename):
+    sqlstr = 'INSERT INTO TransactionList  SELECT * FROM history_download;'
+    if runsql(conn, sqlstr):
+        print ('getnewtransactions worked')
+    sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
+    # sg.Popup('sqloutput=>', sqloutput)
+    return sqloutput
+
+
+def gettablenames(conn):
+    sqlstr = """SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';"""
+    sqloutput = runsql(conn, sqlstr)
+    # sg.Popup('sqloutput=>', sqloutput)
+    return sqloutput
+
 def catcreaterow(conn, catcategory):
     if catcategory[0] != '':
         sqlstr = 'INSERT INTO Categories ( Category, Notes ) VALUES(?, ?)'
@@ -288,7 +331,7 @@ def main():
     # read in current transactions
 
     transactionlist = gettransactions(conn,'Transactionlist')
-    newtransactionlist = gettransactions(conn,'NewTransactions')
+    # newtransactionlist = gettransactions(conn,'NewTransactions')
 
     categorylist = getcategories(conn, 'Categories')
     ewcategorylist = ewgetcategories(conn, 'Categories')
@@ -307,7 +350,9 @@ def main():
                 ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
                 ['&Help', '&About...'] , ]
 
-    newtransactionstab_layout = [[sg.Table(newtransactionlist,
+    newtransactionstab_layout = [[sg.T('old new transactions tab')]]
+
+    '''newtransactionstab_layout = [[sg.Table(newtransactionlist,
                             headings=myheadings,
                             max_col_width=40,
                             auto_size_columns=True,
@@ -317,7 +362,7 @@ def main():
                             enable_events=True,
                             tooltip='New Transactions',
                             key='-NEWTRANSACTIONLISTBOX-')],
-                            [sg.Button('Edit Transaction', key='-EDITNEWTRANSACTION-')]]
+                            [sg.Button('Edit Transaction', key='-EDITNEWTRANSACTION-')]]'''
 
     forecasttab_layout = [[sg.T('forecast tab')]]
 
@@ -341,7 +386,8 @@ def main():
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
-    sparetab_layout = [[sg.T('new spare tab')]]
+    newtranstab_layout = [[sg.T('new newtrans tab')],
+                          [sg.B('Add New Transactions', key='-NEWT-'), sg.B('List Tables', key='-NEWTABLELIST-')]]
 
     transactionlistbox_layout = [[sg.Menu(menu_def, )],
                            [sg.Table(transactionlist,
@@ -372,7 +418,7 @@ def main():
                                 [sg.Tab('New Transactions', newtransactionstab_layout, background_color=charcoal)],
                                 [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
-                                [sg.Tab('Spare', sparetab_layout, background_color=charcoal)]
+                                [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
                                 ])
                         ],
                          [sg.InputText('Message Area', size=(110, 1), key='-MESSAGEAREA-', background_color='white')],
@@ -409,7 +455,7 @@ def main():
             thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
             # sg.Popup('thenewcategory =>', thenewcategory)
             if len(thenewcategory) > 1:
-                # sg.Popup('thenewcategory is =>', thenewcategory[1])
+                # sg.Popup('thenewcategory is =>', thenewcategory[0])
                 transupdatethecategory(conn, thenewcategory)
                 ewcategorylist = ewgetcategories(conn, 'Categories')
                 transactionlist = gettransactions(conn, 'Transactionlist')
@@ -435,7 +481,15 @@ def main():
             # print('catcategory =>', catcategory)
             catcreaterow(conn, catcategory)
         
-        
+        elif event == '-NEWT-':
+            print('NEWT')
+            newrecordcount = getnewtransactions(conn, 'Transactionlist')
+            sg.Popup('new rec count =>', newrecordcount)
+
+        elif event == '-NEWTABLELIST-':
+            tablelist = gettablenames(conn)
+            print('tablelist =>', tablelist)
+
 
 # ##########################################
 # execute the main function
