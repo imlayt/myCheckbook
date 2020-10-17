@@ -3,7 +3,7 @@ from sqlite3 import Error
 import PySimpleGUI as sg
 import os
 import sys
-from datetime import datetime
+from datetime import date
 
 my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
 # my_db_file = 'myFinances-AppData.db'
@@ -50,7 +50,6 @@ def editwindow(transactiondata, categorylist):
 
 def runsql(conn, sqlstring, rowdata=None):
     """
-
     :param conn:
     :param sqlstring:
     :param rowdata:
@@ -73,95 +72,7 @@ def runsql(conn, sqlstring, rowdata=None):
     except Error as e:
         print(e)
         print('runsql FAILED(', rowdata, ')')
-        return False
-
-
-def createrow(conn, sqlstring, rowdata):
-    """
-
-    :param conn:
-    :param sqlstring:
-    :param rowdata:
-    :return: True if successful  else False
-    """
-
-    try:
-        curr = conn.cursor()
-        # print('curr creation succeeded')
-        # print('sqlstring =>', sqlstring)
-        curr.execute(sqlstring, rowdata)
-        # commit the changes
-        conn.commit()
-        # print('commit succeeded')
-        return True
-    except Error as e:
-        print(e)
-        print('createrow FAILED(', rowdata, ')')
-        return False
-
-
-def readrows(conn, sqlstring, sqlvaluelist=None):
-    """
-
-    :param sqlstring:
-    :param sqlvaluelist: values to be inserted into the sqlstring when the cursor is executed
-    :return: list containing 1 or more rows or None
-    """
-
-    try:
-        curr = conn.cursor()
-        # print('readrows curr creation succeeded')
-        if sqlvaluelist is None:
-            # sg.Popup('readrows sqlvaluelist is None, sqlstring =>', sqlstring)
-            # print('readrows sqlvaluelist is None, sqlstring =>', sqlstring)
-            # print('sqlstring =>', sqlstring)
-            curr.execute(sqlstring)
-        else:
-            # sg.Popup('readrows sqlvaluelist is NOT None',sqlstring, sqlvaluelist )
-            # print('readrows cur.execute =>', sqlstring, ((sqlvaluelist),))
-            curr.execute(sqlstring, (sqlvaluelist,))
-
-        # print('readrows curr.execute succeeded')
-        therecords = curr.fetchall()
-        # print('readrows therecords => ', therecords)
-        return therecords
-    except Error as e:
-        print('readrows error =>', e)
         return None
-
-
-def updaterow(conn, sqlstring, rowdata):
-    """
-
-    :param sqlstring:
-    :param rowdata:
-    :return: True if successful else False
-    """
-
-    try:
-        curr = conn.cursor()
-        # print('curr creation succeeded')
-        # print('sqlstring =>', sqlstring)
-        # print('rowdata =>', rowdata)
-        curr.execute(sqlstring, rowdata)
-        # commit the changes
-        conn.commit()
-        # print('curr.execute succeeded')
-        return True
-    except Error as e:
-        print(e)
-        print('update entry FAILED(', rowdata, ')')
-        print('sqlstring =>', sqlstring)
-        return False
-
-
-def deleterow(conn, sqlstring):
-    """
-
-    :param sqlstring:
-    :return: True if successful else False
-    """
-    pass
 
 
 def tableexists(datafile, datatable):
@@ -211,7 +122,7 @@ def setmessage(message, window):
     :param message:
     :return:
     """
-    print('new message => ', message)
+    # print('new message => ', message)
     window.FindElement('-MESSAGEAREA-').Update(message)
     window.Refresh()
 
@@ -235,7 +146,7 @@ def ewgetcategories(conn, tablename):
     sqlstring = 'SELECT Category, Notes FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
-    thecategories = readrows(conn, sql)
+    thecategories = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
     if thecategories:
@@ -247,7 +158,7 @@ def getcategories(conn, tablename):
     sqlstring = 'SELECT * FROM '
     sql = sqlstring + tablename + ' ; '
     # sg.Popup('sql =>', sql)
-    thecategories = readrows(conn, sql)
+    thecategories = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
     if thecategories:
@@ -259,7 +170,7 @@ def gettransactions(conn, tablename):
     sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Category FROM '
     sql = sqlstring + tablename + ' ORDER BY Transaction_Id ; '
     # sg.Popup('sql =>', sql)
-    thetransactions = readrows(conn, sql)
+    thetransactions = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
     if thetransactions:
@@ -272,8 +183,7 @@ def transupdatethecategory(conn, thenewcategory):
     # 'update TransactionList SET Category = "test category" where Transaction_Id = "20200926_237442"'
     if thenewcategory[0] != '':
         sqlstr = 'update TransactionList SET Category = ? where Transaction_Id = ?'
-        updaterow(conn, sqlstr, thenewcategory)
-        gettransactions(conn, 'Transactionlist')
+        runsql(conn, sqlstr, thenewcategory)
 
 
 def catupdatethecategory(conn, catcategory):
@@ -286,11 +196,15 @@ def catupdatethecategory(conn, catcategory):
         Notes = ?
         WHERE ID = ?
         """
-        updaterow(conn, sqlstr, catcategory)
-
+        sqloutput = runsql(conn, sqlstr, catcategory)
+        print('sqloutput =>', sqloutput)
 
 def getnewtransactions(conn, tablename):
-    sqlstr = 'INSERT INTO TransactionList  SELECT * FROM history_download;'
+    # print('tablename =>', tablename[1:len(tablename)-2])
+    # tablename = [list(ele) for ele in tablename]
+    # print('tablename =>', tablename[1:len(tablename)-2])
+    sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename[1:len(tablename)-2] + ' ;'
+    # print(sqlstr)
     if runsql(conn, sqlstr):
         print ('getnewtransactions worked')
     sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
@@ -301,6 +215,7 @@ def getnewtransactions(conn, tablename):
 def gettablenames(conn):
     sqlstr = """SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';"""
     sqloutput = runsql(conn, sqlstr)
+    sqloutput = [list(ele) for ele in sqloutput]
     # sg.Popup('sqloutput=>', sqloutput)
     return sqloutput
 
@@ -308,8 +223,16 @@ def gettablenames(conn):
 def catcreaterow(conn, catcategory):
     if catcategory[0] != '':
         sqlstr = 'INSERT INTO Categories ( Category, Notes ) VALUES(?, ?)'
-        createrow(conn, sqlstr, catcategory)
+        sqloutput = runsql(conn, sqlstr, catcategory)
+        print('sqlout =>', sqloutput)
 
+
+def fillsummarylist(conn,):
+    sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList GROUP By Category ;'
+    sqloutput = runsql(conn, sqlstr)
+    sqloutput = [list(ele) for ele in sqloutput]
+    # print('sqlout =>', sqloutput)
+    return sqloutput
 
 def main():
 
@@ -333,6 +256,13 @@ def main():
 
     transactionlist = gettransactions(conn,'Transactionlist')
     # newtransactionlist = gettransactions(conn,'NewTransactions')
+    tablenamelist = gettablenames(conn)
+    csvtablename = []
+
+    summarylist = fillsummarylist(conn)
+    summaryheadings = [['Category'], ['Amount']]
+    summarystartdate = date.today()
+    summaryenddate = date.today()
 
     categorylist = getcategories(conn, 'Categories')
     ewcategorylist = ewgetcategories(conn, 'Categories')
@@ -351,7 +281,21 @@ def main():
                 ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
                 ['&Help', '&About...'] , ]
 
-    newtransactionstab_layout = [[sg.T('old new transactions tab')]]
+    summarytab_layout = [[sg.Table(summarylist,
+                            headings=summaryheadings,
+                            max_col_width=40,
+                            auto_size_columns=True,
+                            justification='left',
+                            display_row_numbers=True,
+                            num_rows=10,
+                            enable_events=True,
+                            key='-SUMMARYLISTTABLE-')],
+                         [sg.T('Start Date', size=(15, 1)), sg.T('End Date', size=(15, 1))],
+                         [sg.In(summarystartdate, size=(17, 1),key='-SUMMARYSTARTDATE-'),
+                          sg.In(summaryenddate, size=(17, 1), key='-SUMMARYENDDATE-'),
+                          sg.Button('Run Report', key=('-RUNREPORT-'))],
+                         [sg.CalendarButton('Calendar', target=(2, 0), size=(15, 1)),
+                          sg.CalendarButton('Calendar', target=(2, 1), size=(15, 1))]]
 
     '''newtransactionstab_layout = [[sg.Table(newtransactionlist,
                             headings=myheadings,
@@ -376,8 +320,6 @@ def main():
                           display_row_numbers=False,
                           num_rows=10,
                           enable_events=True,
-                          change_submits=True,
-                          bind_return_key=True,
                           key='-CATEGORYLISTBOX-')]]
 
     categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='-CATID-', disabled=True)],
@@ -388,7 +330,9 @@ def main():
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
     newtranstab_layout = [[sg.T('new newtrans tab')],
-                          [sg.B('Add New Transactions', key='-NEWT-'), sg.B('List Tables', key='-NEWTABLELIST-')]]
+                          [sg.Listbox(tablenamelist, size=(30, 10) , enable_events=True, key='-TABLENAMELIST-')],
+                          [sg.In(csvtablename, size=(30, 1), key='-CSVTABLENAME-')],
+                          [ sg.B('List Tables', key='-NEWTABLELIST-'), sg.B('Add New Transactions', key='-NEWT-')]]
 
     transactionlistbox_layout = [[sg.Menu(menu_def, )],
                            [sg.Table(transactionlist,
@@ -416,7 +360,7 @@ def main():
                                  tooltip='Old Transactions',
                                  key='-TRANSACTIONLISTBOX-')],
                         [sg.TabGroup([
-                                [sg.Tab('New Transactions', newtransactionstab_layout, background_color=charcoal)],
+                                [sg.Tab('Summary', summarytab_layout, background_color=charcoal)],
                                 [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
                                 [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
@@ -430,7 +374,6 @@ def main():
     window = sg.Window('myFinances App', default_element_size=(15, 1), background_color=mediumgreen2).Layout(
     mainscreenlayout)
     window.Finalize()
-    # sg.popup('after window Finalize')
     window.Refresh()
 
     # filltransactionlistbox(transactionlist, window)
@@ -483,18 +426,30 @@ def main():
             catcreaterow(conn, catcategory)
         
         elif event == '-NEWT-':
-            print('NEWT')
-            newrecordcount = getnewtransactions(conn, 'Transactionlist')
-            messagetxt = []
-            messagetxt.append ('new rec count => ')
-            messagetxt.append( newrecordcount)
-            setmessage(messagetxt, window )
-            transactionlist = gettransactions(conn, 'Transactionlist')
-            window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
+            inputtable = values['-CSVTABLENAME-']
+            # print('inputtable =>', inputtable)
+            if len(inputtable) > 0:
+                newrecordcount = getnewtransactions(conn, inputtable)
+                messagetxt = []
+                messagetxt.append ('new rec count => ')
+                messagetxt.append( newrecordcount)
+                setmessage(messagetxt, window )
+                transactionlist = gettransactions(conn, 'Transactionlist')
+                window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
+            else:
+                sg.Popup('inputtable is empty')
 
         elif event == '-NEWTABLELIST-':
-            tablelist = gettablenames(conn)
-            print('tablelist =>', tablelist)
+            tablenamelist = gettablenames(conn)
+            window.FindElement('-TABLENAMELIST-').Update(tablenamelist)
+            # print('tablelist =>', tablenamelist)
+            window.Refresh()
+
+        elif event == '-TABLENAMELIST-':
+            # tablerowid = int(values['-TABLENAMELIST-'][0])
+            csvtablename = values['-TABLENAMELIST-'][0]
+            window.FindElement('-CSVTABLENAME-').Update(csvtablename)
+            window.Refresh()
 
 
 # ##########################################
