@@ -265,6 +265,80 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
     # print('sqlout =>', sqloutput)
     return summarylist
 
+def filldailysummarylist(conn, summarystart=None, summaryend=None):
+
+    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
+
+    if summarystart is None:
+        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
+        sqloutput = runsql(conn, sqlstr)
+
+    elif summaryend is None:
+        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Posted_Date ORDER by Posted_Date;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    else:
+        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    # sqloutput = runsql(conn, sqlstr, summarystart)
+    sqloutput = [list(ele) for ele in sqloutput]
+
+    newsummarylist = ['{:03.2f}'.format(x[1]) for x in sqloutput]
+    summarylist = [j.pop(0) for j in sqloutput]
+    zipsummarylist = list(zip(summarylist, newsummarylist))
+    # print('zipsummarylist', list(zipsummarylist))
+    # summarylist = list(zipsummarylist)
+    summarylist = [list(ele) for ele in zipsummarylist]
+    # print('summarylist-final', summarylist)
+
+    # print('sqlout =>', sqloutput)
+    return summarylist
+
+
+def filldailybalancelist(conn, summarystart=None, summaryend=None):
+
+    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
+
+    if summarystart is None:
+        sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
+        sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
+        sqloutput = runsql(conn, sqlstr)
+
+    elif summaryend is None:
+        sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Posted_Date ORDER by Posted_Date;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    else:
+        sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    # sqloutput = runsql(conn, sqlstr, summarystart)
+    sqloutput = [list(ele) for ele in sqloutput]
+
+    newsummarylist = ['{:03.2f}'.format(x[1]) for x in sqloutput]
+    summarylist = [j.pop(0) for j in sqloutput]
+    zipsummarylist = list(zip(summarylist, newsummarylist))
+    # print('zipsummarylist', list(zipsummarylist))
+    # summarylist = list(zipsummarylist)
+    summarylist = [list(ele) for ele in zipsummarylist]
+    # print('summarylist-final', summarylist)
+
+    # print('sqlout =>', sqloutput)
+    return summarylist
+
+
 def main():
 
     if validatedatafile(my_db_file):
@@ -296,6 +370,13 @@ def main():
     summarystartdate = date.today()
     summaryenddate = date.today()
 
+    dailysummarylist = filldailysummarylist(conn)
+    dailysummaryheadings = [['Day'], ['Amount']]
+    # print('dailysummarylist =>', dailysummarylist)
+
+    dailybalancelist = filldailybalancelist(conn)
+    dailysummaryheadings = [['Day'], ['Amount']]
+
     categorylist = getcategories(conn, 'Categories')
     ewcategorylist = ewgetcategories(conn, 'Categories')
     catid = '0'
@@ -317,15 +398,36 @@ def main():
                             headings=summaryheadings,
                             max_col_width=40,
                             auto_size_columns=True,
-                            justification='left',
+                            justification='right',
                             display_row_numbers=True,
                             num_rows=10,
                             enable_events=True,
-                            key='-SUMMARYLISTTABLE-')],
+                            key='-SUMMARYLISTTABLE-'),
+                          sg.Table(dailysummarylist,
+                                  headings=dailysummaryheadings,
+                                  max_col_width=40,
+                                  auto_size_columns=True,
+                                  justification='right',
+                                  display_row_numbers=True,
+                                  num_rows=10,
+                                  enable_events=True,
+                                  key='-DAILYSUMMARYLISTTABLE-'),
+                          sg.Table(dailybalancelist,
+                                  headings=dailysummaryheadings,
+                                  max_col_width=40,
+                                  auto_size_columns=True,
+                                  justification='right',
+                                  display_row_numbers=True,
+                                  num_rows=10,
+                                  enable_events=True,
+                                  key='-DAILYBALANCELISTTABLE-')
+                          ],
                          [sg.T('Start Date', size=(15, 1)), sg.T('End Date', size=(15, 1))],
-                         [sg.In(summarystartdate, size=(17, 1),key='-SUMMARYSTARTDATE-'),
-                          sg.In(summaryenddate, size=(17, 1), key='-SUMMARYENDDATE-'),
-                          sg.Button('Run Report', key=('-RUNREPORT-'))],
+                         [sg.In(str(summarystartdate), size=(17, 1),key='-SUMMARYSTARTDATE-'),
+                          sg.In(str(summaryenddate), size=(17, 1), key='-SUMMARYENDDATE-'),
+                          sg.Button('Run CategoryReport', key=('-RUNREPORT-')),
+                          sg.Button('Run Daily Report', key=('-RUNDAILYREPORT-')),
+                          sg.Button('Run Daily Balance', key=('-RUNDAILYBALANCEREPORT-'))],
                          [sg.CalendarButton('Calendar', target=(2, 0), size=(15, 1)),
                           sg.CalendarButton('Calendar', target=(2, 1), size=(15, 1))]]
 
@@ -493,6 +595,25 @@ def main():
             window.FindElement('-SUMMARYLISTTABLE-').Update(summarylist)
             window.Refresh()
 
+        elif event == '-RUNDAILYREPORT-':
+            summarystartdate = values['-SUMMARYSTARTDATE-']
+            summarystartdate = summarystartdate[0:10]
+            summaryenddate = values['-SUMMARYENDDATE-']
+            summaryenddate = summaryenddate[0:10]
+            # sg.Popup('summarystartdate =>', summarystartdate)
+            dailysummarylist = filldailysummarylist(conn, summarystartdate, summaryenddate)
+            window.FindElement('-DAILYSUMMARYLISTTABLE-').Update(dailysummarylist)
+            window.Refresh()
+
+        elif event == '-RUNDAILYBALANCEREPORT-':
+            summarystartdate = values['-SUMMARYSTARTDATE-']
+            summarystartdate = summarystartdate[0:10]
+            summaryenddate = values['-SUMMARYENDDATE-']
+            summaryenddate = summaryenddate[0:10]
+            # sg.Popup('summarystartdate =>', summarystartdate)
+            dailybalancelist = filldailybalancelist(conn, summarystartdate, summaryenddate)
+            window.FindElement('-DAILYBALANCELISTTABLE-').Update(dailybalancelist)
+            window.Refresh()
 # ##########################################
 # execute the main function
 if __name__=="__main__":
