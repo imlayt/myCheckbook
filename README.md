@@ -5,3 +5,4 @@ This is still just a crude shell. It reads data from a SQLite3 database. One tab
 
 The user interface is created using PySimpleGUI (a great toolkit).
 
+![myCheckbook screenshot](/myCheckbook.png)
