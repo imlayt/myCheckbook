@@ -1,9 +1,11 @@
-import sqlite3
-from sqlite3 import Error
-import PySimpleGUI as sg
 import os
+import sqlite3
 import sys
+import datetime
 from datetime import date
+from sqlite3 import Error
+
+import PySimpleGUI as sg
 
 my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
 # my_db_file = 'myFinances-AppData.db'
@@ -227,12 +229,41 @@ def catcreaterow(conn, catcategory):
         print('sqlout =>', sqloutput)
 
 
-def fillsummarylist(conn,):
-    sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList GROUP By Category ;'
-    sqloutput = runsql(conn, sqlstr)
+def fillsummarylist(conn, summarystart=None, summaryend=None):
+
+    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
+
+    if summarystart is None:
+        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + ' GROUP By Category ORDER by Amount;'
+        sqloutput = runsql(conn, sqlstr)
+
+    elif summaryend is None:
+        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Category ORDER by Amount;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    else:
+        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + ' GROUP By Category ORDER by Amount;'
+        # print('sql string and data =>', sqlstr)
+        sqloutput = runsql(conn, sqlstr)
+
+    # sqloutput = runsql(conn, sqlstr, summarystart)
     sqloutput = [list(ele) for ele in sqloutput]
+
+    newsummarylist = ['{:03.2f}'.format(x[1]) for x in sqloutput]
+    summarylist = [j.pop(0) for j in sqloutput]
+    zipsummarylist = list(zip(summarylist, newsummarylist))
+    # print('zipsummarylist', list(zipsummarylist))
+    # summarylist = list(zipsummarylist)
+    summarylist = [list(ele) for ele in zipsummarylist]
+    # print('summarylist-final', summarylist)
+
     # print('sqlout =>', sqloutput)
-    return sqloutput
+    return summarylist
 
 def main():
 
@@ -260,6 +291,7 @@ def main():
     csvtablename = []
 
     summarylist = fillsummarylist(conn)
+
     summaryheadings = [['Category'], ['Amount']]
     summarystartdate = date.today()
     summaryenddate = date.today()
@@ -451,6 +483,15 @@ def main():
             window.FindElement('-CSVTABLENAME-').Update(csvtablename)
             window.Refresh()
 
+        elif event == '-RUNREPORT-':
+            summarystartdate = values['-SUMMARYSTARTDATE-']
+            summarystartdate = summarystartdate[0:10]
+            summaryenddate = values['-SUMMARYENDDATE-']
+            summaryenddate = summaryenddate[0:10]
+            # sg.Popup('summarystartdate =>', summarystartdate)
+            summarylist = fillsummarylist(conn, summarystartdate, summaryenddate)
+            window.FindElement('-SUMMARYLISTTABLE-').Update(summarylist)
+            window.Refresh()
 
 # ##########################################
 # execute the main function
