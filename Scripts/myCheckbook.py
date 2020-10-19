@@ -4,12 +4,10 @@ import sys
 import datetime
 from datetime import date
 from sqlite3 import Error
-
 import PySimpleGUI as sg
 
 my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
 # my_db_file = 'myFinances-AppData.db'
-# my_db_file = ''
 
 lightblue = '#b9def4'  # color used by PySimpleGUIdef __init__(self, logfile, table='LogEntries'):
 mediumblue = '#d2d2df'  # color used by PySimpleGUI
@@ -17,6 +15,29 @@ mediumblue2 = '#534aea'  # color used by PySimpleGUI
 mediumgreen = '#66b3b3'  # color used by PySimpleGUI
 mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 charcoal = '#6a6a6a'
+
+def drawgraph(datalist, graph, window=None):
+    mysize = (12, 1)
+    BAR_WIDTH = 15
+    BAR_SPACING = 17
+    EDGE_OFFSET = 3
+    GRAPH_SIZE = (700, 200)
+    DATA_SIZE = (700, 200)
+    mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
+    charcoal = '#6a6a6a'
+
+    myfont = "Ariel 10"
+
+    graph.erase()
+    for i in (range(len(datalist))):
+        display_value = (float(datalist[i][1])).__round__(0)
+        graph_value = (float(datalist[i][1])/50).__round__(0)    # divide by 50 to make the bars fit on the chart
+        # print('graph_value', graph_value)
+        graph.draw_rectangle(top_left=(i * BAR_SPACING + EDGE_OFFSET, graph_value),
+                bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
+        graph.draw_text(text=str(display_value),
+            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 10), color='white', font=myfont, angle=60)
+
 
 def editwindow(transactiondata, categorylist):
 
@@ -443,7 +464,11 @@ def main():
                             key='-NEWTRANSACTIONLISTBOX-')],
                             [sg.Button('Edit Transaction', key='-EDITNEWTRANSACTION-')]]'''
 
-    forecasttab_layout = [[sg.T('forecast tab')]]
+    graph = sg.Graph((750, 250), (0, 0), (750, 250))
+
+    forecasttab_layout = [[sg.T('forecast tab')],
+                          [graph],
+                          [sg.Button('run graph', key=('-RUNGRAPH-'))]]
 
     categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
@@ -586,34 +611,32 @@ def main():
             window.Refresh()
 
         elif event == '-RUNREPORT-':
-            summarystartdate = values['-SUMMARYSTARTDATE-']
-            summarystartdate = summarystartdate[0:10]
-            summaryenddate = values['-SUMMARYENDDATE-']
-            summaryenddate = summaryenddate[0:10]
+            summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
+            summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             summarylist = fillsummarylist(conn, summarystartdate, summaryenddate)
             window.FindElement('-SUMMARYLISTTABLE-').Update(summarylist)
             window.Refresh()
 
         elif event == '-RUNDAILYREPORT-':
-            summarystartdate = values['-SUMMARYSTARTDATE-']
-            summarystartdate = summarystartdate[0:10]
-            summaryenddate = values['-SUMMARYENDDATE-']
-            summaryenddate = summaryenddate[0:10]
+            summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
+            summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             dailysummarylist = filldailysummarylist(conn, summarystartdate, summaryenddate)
             window.FindElement('-DAILYSUMMARYLISTTABLE-').Update(dailysummarylist)
             window.Refresh()
 
         elif event == '-RUNDAILYBALANCEREPORT-':
-            summarystartdate = values['-SUMMARYSTARTDATE-']
-            summarystartdate = summarystartdate[0:10]
-            summaryenddate = values['-SUMMARYENDDATE-']
-            summaryenddate = summaryenddate[0:10]
+            summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
+            summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             dailybalancelist = filldailybalancelist(conn, summarystartdate, summaryenddate)
             window.FindElement('-DAILYBALANCELISTTABLE-').Update(dailybalancelist)
             window.Refresh()
+
+        elif event == '-RUNGRAPH-':
+            drawgraph(dailybalancelist, graph, window)
+
 # ##########################################
 # execute the main function
 if __name__=="__main__":
