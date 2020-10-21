@@ -49,7 +49,8 @@ def editwindow(transactiondata, categorylist):
               [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='-EWDATE-', disabled=True)],
               [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[4],
                       key='-EWCATEGORY-', enable_events=True)],
-              [sg.Exit(), sg.Button('Save', key='-EWSAVE-')]]
+              [sg.Exit(), sg.Button('Save', key='-EWSAVE-')],
+              [sg.T("Exit doesn't save the changes")]]
     # print('categorylist =>', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
     transactionkey = str(transactiondata[0])
@@ -256,19 +257,19 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
 
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + ' GROUP By Category ORDER by Amount;'
+        sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Category ORDER by Amount;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Category ORDER by Category;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
         sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
-        sqlstr = sqlstr + ' GROUP By Category ORDER by Amount;'
+        sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
@@ -387,16 +388,16 @@ def main():
 
     summarylist = fillsummarylist(conn)
 
-    summaryheadings = [['Category'], ['Amount']]
+    summaryheadings = ['Category', 'Amount']
     summarystartdate = date.today()
     summaryenddate = date.today()
 
     dailysummarylist = filldailysummarylist(conn)
-    dailysummaryheadings = [['Day'], ['Amount']]
+    dailysummaryheadings = ['Day', 'Amount']
     # print('dailysummarylist =>', dailysummarylist)
 
     dailybalancelist = filldailybalancelist(conn)
-    dailysummaryheadings = [['Day'], ['Amount']]
+    dailysummaryheadings = ['Day', 'Amount']
 
     categorylist = getcategories(conn, 'Categories')
     ewcategorylist = ewgetcategories(conn, 'Categories')
@@ -405,8 +406,8 @@ def main():
     catnotes = ''
     # print('Categories', categorylist)
 
-    myheadings = [['Trans_ID'], ['Transaction'], ['Amount'], ['Posted'], ['Category']]
-    categoryheadings = [['ID'], ['Category'], ['Notes']]
+    myheadings = ['Trans_ID', 'Transaction', 'Amount', 'Posted', 'Category']
+    categoryheadings = ['ID', 'Category', 'Notes']
     # print('headings =>', myheadings)
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
@@ -415,12 +416,16 @@ def main():
                 ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
                 ['&Help', '&About...'] , ]
 
-    summarytab_layout = [[sg.Table(summarylist,
+    summarytab_layout = [[sg.T('Summary by Category', size=(30, 1)),
+                          sg.T('Daily Spend Summary', size=(26, 1)),
+                          sg.T('Daily Balance Summary', size=(30, 1))],
+                          [sg.Table(summarylist,
                             headings=summaryheadings,
                             max_col_width=40,
                             auto_size_columns=True,
                             justification='right',
                             display_row_numbers=True,
+                            alternating_row_color=mediumblue2,
                             num_rows=10,
                             enable_events=True,
                             key='-SUMMARYLISTTABLE-'),
@@ -430,6 +435,7 @@ def main():
                                   auto_size_columns=True,
                                   justification='right',
                                   display_row_numbers=True,
+                                  alternating_row_color=mediumblue2,
                                   num_rows=10,
                                   enable_events=True,
                                   key='-DAILYSUMMARYLISTTABLE-'),
@@ -439,6 +445,7 @@ def main():
                                   auto_size_columns=True,
                                   justification='right',
                                   display_row_numbers=True,
+                                  alternating_row_color=mediumblue2,
                                   num_rows=10,
                                   enable_events=True,
                                   key='-DAILYBALANCELISTTABLE-')
@@ -449,8 +456,9 @@ def main():
                           sg.Button('Run CategoryReport', key=('-RUNREPORT-')),
                           sg.Button('Run Daily Report', key=('-RUNDAILYREPORT-')),
                           sg.Button('Run Daily Balance', key=('-RUNDAILYBALANCEREPORT-'))],
-                         [sg.CalendarButton('Calendar', target=(2, 0), size=(15, 1)),
-                          sg.CalendarButton('Calendar', target=(2, 1), size=(15, 1))]]
+                         [sg.CalendarButton('Calendar', target=(3, 0), size=(15, 1)),
+                          sg.CalendarButton('Calendar', target=(3, 1), size=(15, 1)),
+                          sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graph.')]]
 
     '''newtransactionstab_layout = [[sg.Table(newtransactionlist,
                             headings=myheadings,
@@ -466,15 +474,14 @@ def main():
 
     graph = sg.Graph((750, 250), (0, 0), (750, 250))
 
-    forecasttab_layout = [[sg.T('forecast tab')],
-                          [graph],
-                          [sg.Button('run graph', key=('-RUNGRAPH-'))]]
+    dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
+                           [graph]]
 
     categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
                           max_col_width=40,
                           auto_size_columns=True,
-                          alternating_row_color=lightblue,
+                          alternating_row_color=mediumblue2,
                           justification='left',
                           display_row_numbers=False,
                           num_rows=10,
@@ -500,13 +507,14 @@ def main():
                             auto_size_columns=True,
                             justification='left',
                             display_row_numbers=True,
+                            alternating_row_color=mediumblue2,
                             num_rows=10,
                             enable_events=True,
                             tooltip='Old Transactions',
                             key='-OLDTRANSACTIONLISTBOX-')],
                             [sg.Button('Edit Transaction', key='-EDITOLDTRANSACTION-')]]
 
-    mainscreenlayout = [[sg.T('Transaction List', size=(38, 1), justification='center')],
+    mainscreenlayout = [[sg.T('Transaction List - click on a row to change the category', size=(45, 1), justification='center')],
                         [sg.Menu(menu_def, )],
                          [sg.Table(transactionlist,
                                  headings=myheadings,
@@ -514,13 +522,14 @@ def main():
                                  auto_size_columns=True,
                                  justification='left',
                                  display_row_numbers=True,
+                                 alternating_row_color=mediumblue2,
                                  num_rows=10,
                                  enable_events=True,
                                  tooltip='Old Transactions',
                                  key='-TRANSACTIONLISTBOX-')],
                         [sg.TabGroup([
                                 [sg.Tab('Summary', summarytab_layout, background_color=charcoal)],
-                                [sg.Tab('Forecast', forecasttab_layout, background_color=charcoal)],
+                                [sg.Tab('Daily Balance Graph', dailybalance_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
                                 [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
                                 ])
@@ -547,9 +556,9 @@ def main():
             # sg.Popup('value =>', values['-CATEGORYLISTBOX-'])
             rowid = int(values['-CATEGORYLISTBOX-'][0])
             # sg.Popup('category =>', categorylist[rowid][1])
-            window.find_element('-CATID-').update(categorylist[rowid][0])
-            window.find_element('-CAT-').update(categorylist[rowid][1])
-            window.find_element('-CATNOTES-').update(categorylist[rowid][2])
+            window['-CATID-'](categorylist[rowid][0])
+            window['-CAT-'](categorylist[rowid][1])
+            window['-CATNOTES-'](categorylist[rowid][2])
             window.Refresh()
 
         elif event == '-TRANSACTIONLISTBOX-':
@@ -562,7 +571,7 @@ def main():
                 transupdatethecategory(conn, thenewcategory)
                 ewcategorylist = ewgetcategories(conn, 'Categories')
                 transactionlist = gettransactions(conn, 'Transactionlist')
-                window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
+                window['-TRANSACTIONLISTBOX-'](transactionlist)
                 window.Refresh()
 
         elif event == '-NEWTRANSACTIONLISTBOX-':
@@ -576,6 +585,9 @@ def main():
             catcategory.append(values['-CATID-'])
             # print('catcategory =>', catcategory)
             catupdatethecategory(conn,catcategory)
+            categorylist = getcategories(conn, 'Categories')
+            window['-CATEGORYLISTBOX-'](categorylist)
+            window.refresh
         
         elif event == '-CATNEW-':
             catcategory = list()
@@ -583,6 +595,9 @@ def main():
             catcategory.append(values['-CATNOTES-'])
             # print('catcategory =>', catcategory)
             catcreaterow(conn, catcategory)
+            categorylist = getcategories(conn, 'Categories')
+            window['-CATEGORYLISTBOX-'](categorylist)
+            window.refresh
         
         elif event == '-NEWT-':
             inputtable = values['-CSVTABLENAME-']
@@ -594,20 +609,20 @@ def main():
                 messagetxt.append( newrecordcount)
                 setmessage(messagetxt, window )
                 transactionlist = gettransactions(conn, 'Transactionlist')
-                window.FindElement('-TRANSACTIONLISTBOX-').Update(transactionlist)
+                window['-TRANSACTIONLISTBOX-'](transactionlist)
             else:
                 sg.Popup('inputtable is empty')
 
         elif event == '-NEWTABLELIST-':
             tablenamelist = gettablenames(conn)
-            window.FindElement('-TABLENAMELIST-').Update(tablenamelist)
+            window['-TABLENAMELIST-'](tablenamelist)
             # print('tablelist =>', tablenamelist)
             window.Refresh()
 
         elif event == '-TABLENAMELIST-':
             # tablerowid = int(values['-TABLENAMELIST-'][0])
             csvtablename = values['-TABLENAMELIST-'][0]
-            window.FindElement('-CSVTABLENAME-').Update(csvtablename)
+            window['-CSVTABLENAME-'](csvtablename)
             window.Refresh()
 
         elif event == '-RUNREPORT-':
@@ -615,7 +630,7 @@ def main():
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             summarylist = fillsummarylist(conn, summarystartdate, summaryenddate)
-            window.FindElement('-SUMMARYLISTTABLE-').Update(summarylist)
+            window['-SUMMARYLISTTABLE-'](summarylist)
             window.Refresh()
 
         elif event == '-RUNDAILYREPORT-':
@@ -623,7 +638,7 @@ def main():
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             dailysummarylist = filldailysummarylist(conn, summarystartdate, summaryenddate)
-            window.FindElement('-DAILYSUMMARYLISTTABLE-').Update(dailysummarylist)
+            window['-DAILYSUMMARYLISTTABLE-'](dailysummarylist)
             window.Refresh()
 
         elif event == '-RUNDAILYBALANCEREPORT-':
@@ -631,7 +646,7 @@ def main():
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate =>', summarystartdate)
             dailybalancelist = filldailybalancelist(conn, summarystartdate, summaryenddate)
-            window.FindElement('-DAILYBALANCELISTTABLE-').Update(dailybalancelist)
+            window['-DAILYBALANCELISTTABLE-'](dailybalancelist)
             window.Refresh()
 
         elif event == '-RUNGRAPH-':
@@ -639,6 +654,6 @@ def main():
 
 # ##########################################
 # execute the main function
-if __name__=="__main__":
+if __name__ == "__main__":
     # execute only if run as a script
     main()
