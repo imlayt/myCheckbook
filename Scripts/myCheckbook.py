@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import sys
-import datetime
 from datetime import date
 from sqlite3 import Error
 import PySimpleGUI as sg
@@ -116,7 +115,7 @@ def tableexists(datafile, datatable):
         try:
             conn = sqlite3.connect(datafile)
 
-            sql2 = "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%s' ;" % tablename
+            sql2 = "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%s' ;" % datatable
 
             # print('sql2 => ', sql2)
             curr = conn.cursor()
@@ -490,10 +489,10 @@ def main():
                           enable_events=True,
                           key='-CATEGORYLISTBOX-')]]
 
-    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)),
+    categorytabcol2_layout = [[sg.T('Primary Key', size=(12, 1)),
                                sg.In(catid, size=(20, 1), key='-CATID-', disabled=True)],
-                              [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='-CAT-')],
-                              [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='-CATNOTES-')],
+                              [sg.T('Category', size=(12, 1)), sg.In(cat, size=(20, 1), key='-CAT-')],
+                              [sg.T('Notes', size=(12, 1)), sg.Multiline(catnotes, size=(20, 10), key='-CATNOTES-')],
                               [sg.Button('Save Changes', key='-CATSAVECHANGES-'), sg.Button('New', key='-CATNEW-')]]
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
