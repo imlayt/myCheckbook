@@ -425,9 +425,9 @@ def main():
                 ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
                 ['&Help', '&About...'] , ]
 
-    summarytab_layout = [[sg.T('Summary by Category', size=(30, 1)),
-                          sg.T('Daily Spend Summary', size=(26, 1)),
-                          sg.T('Daily Balance Summary', size=(30, 1))],
+    summarytab_layout = [[sg.T('Summary by Category', size=(30, 1), justification='center'),
+                          sg.T('Daily Spend Summary', size=(26, 1), justification='center'),
+                          sg.T('Daily Balance Summary', size=(25, 1), justification='center')],
                           [sg.Table(summarylist,
                             headings=summaryheadings,
                             max_col_width=40,
@@ -435,7 +435,7 @@ def main():
                             justification='right',
                             display_row_numbers=True,
                             alternating_row_color=mediumblue2,
-                            num_rows=10,
+                            num_rows=20,
                             enable_events=True,
                             key='-SUMMARYLISTTABLE-'),
                           sg.Table(dailysummarylist,
@@ -445,7 +445,7 @@ def main():
                                   justification='right',
                                   display_row_numbers=True,
                                   alternating_row_color=mediumblue2,
-                                  num_rows=10,
+                                  num_rows=20,
                                   enable_events=True,
                                   key='-DAILYSUMMARYLISTTABLE-'),
                           sg.Table(dailybalancelist,
@@ -455,7 +455,7 @@ def main():
                                   justification='right',
                                   display_row_numbers=True,
                                   alternating_row_color=mediumblue2,
-                                  num_rows=10,
+                                  num_rows=20,
                                   enable_events=True,
                                   key='-DAILYBALANCELISTTABLE-')
                           ],
@@ -474,9 +474,26 @@ def main():
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
+    transactiontab_layout= [[sg.Button('Show transactions', key=('-SHOWTRANSACTIONS-'))],
+                            [sg.T('Transaction List - click on a row to change the category', \
+                                    size=(45, 1), justification='center')],
+                            [sg.Table(transactionlist,
+                                    headings=myheadings,
+                                    max_col_width=40,
+                                    auto_size_columns=True,
+                                    justification='left',
+                                    display_row_numbers=True,
+                                    alternating_row_color=mediumblue2,
+                                    num_rows=22,
+                                    enable_events=True,
+                                    tooltip='Transactions from bank',
+                                    key='-TRANSACTIONLISTBOX-')]
+                            ]
 
     dailyspend_layout = [[sg.Button('Show spending graph', key=('-RUNSPENDGRAPH-'))],
                            [spendgraph]]
+
+    forecasttranstab_layout = [[sg.T('forecast transactions')]]
 
     categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
@@ -516,21 +533,10 @@ def main():
                             key='-OLDTRANSACTIONLISTBOX-')],
                             [sg.Button('Edit Transaction', key='-EDITOLDTRANSACTION-')]]
 
-    mainscreenlayout = [[sg.T('Transaction List - click on a row to change the category', \
-                        size=(45, 1), justification='center')],
+    mainscreenlayout = [
                         [sg.Menu(menu_def, )],
-                         [sg.Table(transactionlist,
-                                 headings=myheadings,
-                                 max_col_width=40,
-                                 auto_size_columns=True,
-                                 justification='left',
-                                 display_row_numbers=True,
-                                 alternating_row_color=mediumblue2,
-                                 num_rows=10,
-                                 enable_events=True,
-                                 tooltip='Old Transactions',
-                                 key='-TRANSACTIONLISTBOX-')],
                         [sg.TabGroup([
+                                [sg.Tab('Transaction List', transactiontab_layout, background_color=charcoal)],
                                 [sg.Tab('Summary', summarytab_layout, background_color=charcoal)],
                                 [sg.Tab('Daily Balance Graph', dailybalance_layout, background_color=charcoal)],
                                 [sg.Tab('Daily Spending Graph', dailyspend_layout, background_color=charcoal)],
