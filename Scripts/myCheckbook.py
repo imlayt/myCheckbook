@@ -16,19 +16,18 @@ mediumgreen = '#66b3b3'  # color used by PySimpleGUI
 mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 charcoal = '#6a6a6a'
 
-def drawgraph(datalist, graph, window=None, scalefactor=None, lableangle=None):
-    mysize = (12, 1)
-    BAR_WIDTH = 15
+
+def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None):
+
+    BAR_WIDTH = 17
     BAR_SPACING = 17
     EDGE_OFFSET = 3
-    GRAPH_SIZE = (700, 200)
-    DATA_SIZE = (700, 200)
     mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
-    charcoal = '#6a6a6a'
 
     myfont = "Ariel 10"
     if scalefactor is None:
         scalefactor = 1
+
     if lableangle is None:
         lableangle = 60
 
@@ -37,10 +36,13 @@ def drawgraph(datalist, graph, window=None, scalefactor=None, lableangle=None):
         display_value = (float(datalist[i][1])).__round__(0)
         graph_value = (float(datalist[i][1])/scalefactor).__round__(0)    # divide by scalefactor to make the bars fit on the chart
         # print('graph_value', graph_value)
+        if flipgraph:
+            graph_value = graph_value * -1
+
         graph.draw_rectangle(top_left=(i * BAR_SPACING + EDGE_OFFSET, graph_value),
                 bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
         graph.draw_text(text=str(display_value),
-            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 10), color='white', font=myfont, angle=lableangle)
+            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 40), color='white', font=myfont, angle=lableangle)
 
 
 def editwindow(transactiondata, categorylist):
@@ -466,10 +468,10 @@ def main():
                           sg.Button('Run Daily Balance', key=('-RUNDAILYBALANCEREPORT-'))],
                          [sg.CalendarButton('Calendar', target=(3, 0), size=(15, 1)),
                           sg.CalendarButton('Calendar', target=(3, 1), size=(15, 1)),
-                          sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graph.')]]
+                          sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graphs.')]]
 
     graph = sg.Graph((750, 250), (0, -100), (750, 250))
-    spendgraph = sg.Graph((750, 250), (0, -725), (750, 250))
+    spendgraph = sg.Graph((750, 250), (0, -20), (750, 250))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
@@ -653,11 +655,11 @@ def main():
             window.Refresh()
 
         elif event == '-RUNGRAPH-':
-            drawgraph(dailybalancelist, graph, window, scalefactor=40)
+            drawgraph(dailybalancelist, graph, scalefactor=40, lableangle=90)
 
         elif event == '-RUNSPENDGRAPH-':
 
-            drawgraph(dailysummarylist, spendgraph, window, scalefactor=5, lableangle=315)
+            drawgraph(dailysummarylist, spendgraph, scalefactor=12, lableangle=90, flipgraph=True)
 
 
 # ##########################################
