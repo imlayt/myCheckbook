@@ -16,7 +16,7 @@ mediumgreen = '#66b3b3'  # color used by PySimpleGUI
 mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 charcoal = '#6a6a6a'
 
-def drawgraph(datalist, graph, window=None):
+def drawgraph(datalist, graph, window=None, scalefactor=None, lableangle=None):
     mysize = (12, 1)
     BAR_WIDTH = 15
     BAR_SPACING = 17
@@ -27,16 +27,20 @@ def drawgraph(datalist, graph, window=None):
     charcoal = '#6a6a6a'
 
     myfont = "Ariel 10"
+    if scalefactor is None:
+        scalefactor = 1
+    if lableangle is None:
+        lableangle = 60
 
     graph.erase()
     for i in (range(len(datalist))):
         display_value = (float(datalist[i][1])).__round__(0)
-        graph_value = (float(datalist[i][1])/50).__round__(0)    # divide by 50 to make the bars fit on the chart
+        graph_value = (float(datalist[i][1])/scalefactor).__round__(0)    # divide by scalefactor to make the bars fit on the chart
         # print('graph_value', graph_value)
         graph.draw_rectangle(top_left=(i * BAR_SPACING + EDGE_OFFSET, graph_value),
                 bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
         graph.draw_text(text=str(display_value),
-            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 10), color='white', font=myfont, angle=60)
+            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 10), color='white', font=myfont, angle=lableangle)
 
 
 def editwindow(transactiondata, categorylist):
@@ -262,13 +266,15 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Category ORDER by Category;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+                 '\'   GROUP By Category ORDER by Category;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -293,18 +299,20 @@ def filldailysummarylist(conn, summarystart=None, summaryend=None):
 
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Amount < 0 GROUP By Posted_Date ORDER by Posted_Date;'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Posted_Date ORDER by Posted_Date;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date => \'' + summarystart + \
+                 '\'   GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -326,8 +334,6 @@ def filldailysummarylist(conn, summarystart=None, summaryend=None):
 
 def filldailybalancelist(conn, summarystart=None, summaryend=None):
 
-    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
-
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
@@ -335,13 +341,15 @@ def filldailybalancelist(conn, summarystart=None, summaryend=None):
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\'   GROUP By Posted_Date ORDER by Posted_Date;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+                 '\'   GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data =>', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -382,7 +390,7 @@ def main():
     # read in current transactions
 
     transactionlist = gettransactions(conn,'Transactionlist')
-    # newtransactionlist = gettransactions(conn,'NewTransactions')
+
     tablenamelist = gettablenames(conn)
     csvtablename = []
 
@@ -408,7 +416,7 @@ def main():
 
     myheadings = ['Trans_ID', 'Transaction', 'Amount', 'Posted', 'Category']
     categoryheadings = ['ID', 'Category', 'Notes']
-    # print('headings =>', myheadings)
+
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
     menu_def = [['&File', ['&Open', '&Save', '&Properties', 'E&xit']],
@@ -460,22 +468,14 @@ def main():
                           sg.CalendarButton('Calendar', target=(3, 1), size=(15, 1)),
                           sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graph.')]]
 
-    '''newtransactionstab_layout = [[sg.Table(newtransactionlist,
-                            headings=myheadings,
-                            max_col_width=40,
-                            auto_size_columns=True,
-                            justification='left',
-                            display_row_numbers=True,
-                            num_rows=10,
-                            enable_events=True,
-                            tooltip='New Transactions',
-                            key='-NEWTRANSACTIONLISTBOX-')],
-                            [sg.Button('Edit Transaction', key='-EDITNEWTRANSACTION-')]]'''
-
-    graph = sg.Graph((750, 250), (0, 0), (750, 250))
+    graph = sg.Graph((750, 250), (0, -100), (750, 250))
+    spendgraph = sg.Graph((750, 250), (0, -725), (750, 250))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
+
+    dailyspend_layout = [[sg.Button('Show spending graph', key=('-RUNSPENDGRAPH-'))],
+                           [spendgraph]]
 
     categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
@@ -488,7 +488,8 @@ def main():
                           enable_events=True,
                           key='-CATEGORYLISTBOX-')]]
 
-    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)), sg.In(catid, size=(20, 1), key='-CATID-', disabled=True)],
+    categorytabcol2_layout = [[sg.T('Primary Key', size=(15, 1)),
+                               sg.In(catid, size=(20, 1), key='-CATID-', disabled=True)],
                               [sg.T('Category', size=(15, 1)), sg.In(cat, size=(20, 1), key='-CAT-')],
                               [sg.T('Notes', size=(15, 1)), sg.Multiline(catnotes, size=(35, 10), key='-CATNOTES-')],
                               [sg.Button('Save Changes', key='-CATSAVECHANGES-'), sg.Button('New', key='-CATNEW-')]]
@@ -514,7 +515,8 @@ def main():
                             key='-OLDTRANSACTIONLISTBOX-')],
                             [sg.Button('Edit Transaction', key='-EDITOLDTRANSACTION-')]]
 
-    mainscreenlayout = [[sg.T('Transaction List - click on a row to change the category', size=(45, 1), justification='center')],
+    mainscreenlayout = [[sg.T('Transaction List - click on a row to change the category', \
+                        size=(45, 1), justification='center')],
                         [sg.Menu(menu_def, )],
                          [sg.Table(transactionlist,
                                  headings=myheadings,
@@ -530,6 +532,7 @@ def main():
                         [sg.TabGroup([
                                 [sg.Tab('Summary', summarytab_layout, background_color=charcoal)],
                                 [sg.Tab('Daily Balance Graph', dailybalance_layout, background_color=charcoal)],
+                                [sg.Tab('Daily Spending Graph', dailyspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
                                 [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
                                 ])
@@ -650,7 +653,12 @@ def main():
             window.Refresh()
 
         elif event == '-RUNGRAPH-':
-            drawgraph(dailybalancelist, graph, window)
+            drawgraph(dailybalancelist, graph, window, scalefactor=40)
+
+        elif event == '-RUNSPENDGRAPH-':
+
+            drawgraph(dailysummarylist, spendgraph, window, scalefactor=5, lableangle=315)
+
 
 # ##########################################
 # execute the main function
