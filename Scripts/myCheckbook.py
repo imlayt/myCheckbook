@@ -56,7 +56,7 @@ def editwindow(transactiondata, categorylist):
                       key='-EWCATEGORY-', enable_events=True)],
               [sg.Exit(), sg.Button('Save', key='-EWSAVE-')],
               [sg.T("Exit doesn't save the changes")]]
-    # print('categorylist =>', categorylist)
+    # print('categorylist ->', categorylist)
     editwindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
     transactionkey = str(transactiondata[0])
     newcat = []
@@ -70,7 +70,7 @@ def editwindow(transactiondata, categorylist):
         if event == '-EWSAVE-':
             newcat.append(values['-EWCATEGORY-'][0])
             newcat.append(transactionkey)
-            # sg.Popup('-EWCATEGORY_ =>', newcat, keep_on_top=True)
+            # sg.Popup('-EWCATEGORY_ ->', newcat, keep_on_top=True)
             editwindow.Close()
             break
 
@@ -78,7 +78,7 @@ def editwindow(transactiondata, categorylist):
 
 
 def catsummarywindow(transactiondata):
-    # print('transactiondata ->', transactiondata)
+    # print('transactiondata  ->', transactiondata)
     sg.SetOptions(element_padding=(2, 2))
     cstransaction_headings = [['Description'], ['Amount'], ['Categoryt']]
     layout = [[sg.Table(transactiondata,
@@ -114,7 +114,7 @@ def runsql(conn, sqlstring, rowdata=None):
     try:
         curr = conn.cursor()
         # print('curr creation succeeded')
-        # print('sqlstring =>', sqlstring)
+        # print('sqlstring ->', sqlstring)
         if rowdata:
             curr.execute(sqlstring, rowdata)
         else:
@@ -123,7 +123,7 @@ def runsql(conn, sqlstring, rowdata=None):
         conn.commit()
         # print('commit succeeded')
         sqloutput = curr.fetchall()
-        # print('sqloutput ->', sqloutput)
+        # print('sqloutput  ->', sqloutput)
         return sqloutput
     except Error as e:
         print(e)
@@ -201,7 +201,7 @@ def db_connection(db_file):
 def ewgetcategories(conn, tablename):
     sqlstring = 'SELECT Category, Notes FROM '
     sql = sqlstring + tablename + ' ; '
-    # sg.Popup('sql =>', sql)
+    # sg.Popup('sql ->', sql)
     thecategories = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
@@ -213,7 +213,7 @@ def ewgetcategories(conn, tablename):
 def getcategories(conn, tablename):
     sqlstring = 'SELECT * FROM '
     sql = sqlstring + tablename + ' ; '
-    # sg.Popup('sql =>', sql)
+    # sg.Popup('sql ->', sql)
     thecategories = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
@@ -225,7 +225,7 @@ def getcategories(conn, tablename):
 def gettransactions(conn, tablename):
     sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Category FROM '
     sql = sqlstring + tablename + ' ORDER BY Transaction_Id ; '
-    # sg.Popup('sql =>', sql)
+    # sg.Popup('sql ->', sql)
     thetransactions = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
@@ -253,12 +253,12 @@ def catupdatethecategory(conn, catcategory):
         WHERE ID = ?
         """
         sqloutput = runsql(conn, sqlstr, catcategory)
-        print('sqloutput =>', sqloutput)
+        print('sqloutput ->', sqloutput)
 
 def getnewtransactions(conn, tablename):
-    # print('tablename =>', tablename[1:len(tablename)-2])
+    # print('tablename ->', tablename[1:len(tablename)-2])
     # tablename = [list(ele) for ele in tablename]
-    # print('tablename =>', tablename[1:len(tablename)-2])
+    # print('tablename ->', tablename[1:len(tablename)-2])
     sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename[1:len(tablename)-2] + ' ;'
     # print(sqlstr)
     if runsql(conn, sqlstr):
@@ -271,7 +271,7 @@ def getnewtransactions(conn, tablename):
 def fillcstransactions(conn, cscategory):
     sqlstr = ' SELECT TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
     sqlstr = sqlstr + ' from TransactionList WHERE Category = \'' + cscategory + '\' ;'
-    # print('sqlstr ->', sqlstr)
+    # print('sqlstr  ->', sqlstr)
     sqloutput = runsql(conn, sqlstr)
     sqloutput = [list(ele) for ele in sqloutput]
 
@@ -290,12 +290,12 @@ def catcreaterow(conn, catcategory):
     if catcategory[0] != '':
         sqlstr = 'INSERT INTO Categories ( Category, Notes ) VALUES(?, ?)'
         sqloutput = runsql(conn, sqlstr, catcategory)
-        print('sqlout =>', sqloutput)
+        print('sqlout ->', sqloutput)
 
 
 def fillsummarylist(conn, summarystart=None, summaryend=None):
 
-    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
+    # print('summarystartdate, summaryenddate ->', summarystart, summaryend )
 
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
@@ -306,7 +306,7 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
         sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
                  '\'   GROUP By Category ORDER by Category;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
@@ -314,7 +314,7 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
         sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
                  '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     # sqloutput = runsql(conn, sqlstr, summarystart)
@@ -328,31 +328,31 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
     summarylist = [list(ele) for ele in zipsummarylist]
     # print('summarylist-final', summarylist)
 
-    # print('sqlout =>', sqloutput)
+    # print('sqlout ->', sqloutput)
     return summarylist
 
 def filldailysummarylist(conn, summarystart=None, summaryend=None):
 
-    # print('summarystartdate, summaryenddate =>', summarystart, summaryend )
+    # print('summarystartdate, summaryenddate ->', summarystart, summaryend )
 
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Amount < 0 GROUP By Posted_Date ORDER by Posted_Date;'
+        sqlstr = sqlstr + 'WHERE TransactionList.Amount <= 0 GROUP By Posted_Date ORDER by Posted_Date;'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date => \'' + summarystart + \
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
                  '\'   GROUP By Posted_Date ORDER by Posted_Date;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
-                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date <= \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     # sqloutput = runsql(conn, sqlstr, summarystart)
@@ -366,7 +366,7 @@ def filldailysummarylist(conn, summarystart=None, summaryend=None):
     summarylist = [list(ele) for ele in zipsummarylist]
     # print('summarylist-final', summarylist)
 
-    # print('sqlout =>', sqloutput)
+    # print('sqlout ->', sqloutput)
     return summarylist
 
 
@@ -379,17 +379,17 @@ def filldailybalancelist(conn, summarystart=None, summaryend=None):
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
                  '\'   GROUP By Posted_Date ORDER by Posted_Date;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Posted_Date, min(TransactionList.Balance) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
-                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date <= \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
-        # print('sql string and data =>', sqlstr)
+        # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     # sqloutput = runsql(conn, sqlstr, summarystart)
@@ -403,7 +403,7 @@ def filldailybalancelist(conn, summarystart=None, summaryend=None):
     summarylist = [list(ele) for ele in zipsummarylist]
     # print('summarylist-final', summarylist)
 
-    # print('sqlout =>', sqloutput)
+    # print('sqlout ->', sqloutput)
     return summarylist
 
 
@@ -418,12 +418,10 @@ def main():
 
     if conn is not None:
         try:
-            # transactions = DataTable(conn, 'Transactions')
-            # print('transactionlist', transactionlist)
-            # sg.popup('loaded transactions')
-            pass
+            if tableexists(my_db_file,'TransactionList'):
+                print('TransactionList exists')
         except:
-            sg.Popup('FAILED to instantiate the tables')
+            sg.Popup('FAILED to find the tables')
             sys.exit(1)
     # read in current transactions
 
@@ -440,7 +438,7 @@ def main():
 
     dailysummarylist = filldailysummarylist(conn)
     dailysummaryheadings = ['Day', 'Amount']
-    # print('dailysummarylist =>', dailysummarylist)
+    # print('dailysummarylist ->', dailysummarylist)
 
     dailybalancelist = filldailybalancelist(conn)
     dailysummaryheadings = ['Day', 'Amount']
@@ -474,6 +472,7 @@ def main():
                             alternating_row_color=mediumblue2,
                             num_rows=20,
                             enable_events=True,
+                            tooltip='click on a category to drill-down',
                             key='-SUMMARYLISTTABLE-'),
                           sg.Table(dailysummarylist,
                                   headings=dailysummaryheadings,
@@ -599,10 +598,10 @@ def main():
             sys.exit(0)
 
         elif event == '-CATEGORYLISTBOX-':
-            # sg.Popup('category table =>', event)
-            # sg.Popup('value =>', values['-CATEGORYLISTBOX-'])
+            # sg.Popup('category table ->', event)
+            # sg.Popup('value ->', values['-CATEGORYLISTBOX-'])
             rowid = int(values['-CATEGORYLISTBOX-'][0])
-            # sg.Popup('category =>', categorylist[rowid][1])
+            # sg.Popup('category ->', categorylist[rowid][1])
             window['-CATID-'](categorylist[rowid][0])
             window['-CAT-'](categorylist[rowid][1])
             window['-CATNOTES-'](categorylist[rowid][2])
@@ -610,11 +609,11 @@ def main():
 
         elif event == '-TRANSACTIONLISTBOX-':
             rowid = int(values['-TRANSACTIONLISTBOX-'][0])
-            # sg.Popup('transaction =>', transactionlist[rowid][0])
+            # sg.Popup('transaction ->', transactionlist[rowid][0])
             thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
-            # sg.Popup('thenewcategory =>', thenewcategory)
+            # sg.Popup('thenewcategory ->', thenewcategory)
             if len(thenewcategory) > 1:
-                # sg.Popup('thenewcategory is =>', thenewcategory[0])
+                # sg.Popup('thenewcategory is ->', thenewcategory[0])
                 transupdatethecategory(conn, thenewcategory)
                 ewcategorylist = ewgetcategories(conn, 'Categories')
                 transactionlist = gettransactions(conn, 'Transactionlist')
@@ -623,14 +622,14 @@ def main():
 
         elif event == '-NEWTRANSACTIONLISTBOX-':
             rowid = int(values['-NEWTRANSACTIONLISTBOX-'][0])
-            # sg.Popup('transaction =>', newtransactionlist[rowid][0])
+            # sg.Popup('transaction ->', newtransactionlist[rowid][0])
             
         elif event == '-CATSAVECHANGES-':
             catcategory = list()
             catcategory.append(values['-CAT-'])
             catcategory.append(values['-CATNOTES-'])
             catcategory.append(values['-CATID-'])
-            # print('catcategory =>', catcategory)
+            # print('catcategory ->', catcategory)
             catupdatethecategory(conn,catcategory)
             categorylist = getcategories(conn, 'Categories')
             window['-CATEGORYLISTBOX-'](categorylist)
@@ -640,7 +639,7 @@ def main():
             catcategory = list()
             catcategory.append(values['-CAT-'])
             catcategory.append(values['-CATNOTES-'])
-            # print('catcategory =>', catcategory)
+            # print('catcategory ->', catcategory)
             catcreaterow(conn, catcategory)
             categorylist = getcategories(conn, 'Categories')
             window['-CATEGORYLISTBOX-'](categorylist)
@@ -648,7 +647,7 @@ def main():
         
         elif event == '-NEWT-':
             inputtable = values['-CSVTABLENAME-']
-            # print('inputtable =>', inputtable)
+            # print('inputtable ->', inputtable)
             if len(inputtable) > 0:
                 newrecordcount = getnewtransactions(conn, inputtable)
                 messagetxt = []
@@ -663,7 +662,7 @@ def main():
         elif event == '-NEWTABLELIST-':
             tablenamelist = gettablenames(conn)
             window['-TABLENAMELIST-'](tablenamelist)
-            # print('tablelist =>', tablenamelist)
+            # print('tablelist ->', tablenamelist)
             window.Refresh()
 
         elif event == '-TABLENAMELIST-':
@@ -675,7 +674,7 @@ def main():
         elif event == '-RUNREPORT-':
             summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
-            # sg.Popup('summarystartdate =>', summarystartdate)
+            # sg.Popup('summarystartdate ->', summarystartdate)
             summarylist = fillsummarylist(conn, summarystartdate, summaryenddate)
             window['-SUMMARYLISTTABLE-'](summarylist)
             window.Refresh()
@@ -683,7 +682,7 @@ def main():
         elif event == '-RUNDAILYREPORT-':
             summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
-            # sg.Popup('summarystartdate =>', summarystartdate)
+            # sg.Popup('summarystartdate ->', summarystartdate)
             dailysummarylist = filldailysummarylist(conn, summarystartdate, summaryenddate)
             window['-DAILYSUMMARYLISTTABLE-'](dailysummarylist)
             window.Refresh()
@@ -691,7 +690,7 @@ def main():
         elif event == '-RUNDAILYBALANCEREPORT-':
             summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
-            # sg.Popup('summarystartdate =>', summarystartdate)
+            # sg.Popup('summarystartdate ->', summarystartdate)
             dailybalancelist = filldailybalancelist(conn, summarystartdate, summaryenddate)
             window['-DAILYBALANCELISTTABLE-'](dailybalancelist)
             window.Refresh()
@@ -704,9 +703,9 @@ def main():
 
         elif event == '-SUMMARYLISTTABLE-':
             rowid = int(values['-SUMMARYLISTTABLE-'][0])
-            # sg.Popup('summary category =>', summarylist[rowid][0])
+            # sg.Popup('summary category ->', summarylist[rowid][0])
             cscategory = summarylist[rowid][0]
-            # print('cscategory =>', cscategory)
+            # print('cscategory ->', cscategory)
             catsummarytransactions = fillcstransactions(conn, cscategory)
             catsummarywindow(catsummarytransactions)
 
