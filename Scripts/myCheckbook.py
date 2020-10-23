@@ -18,8 +18,8 @@ charcoal = '#6a6a6a'
 
 def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None):
 
-    BAR_WIDTH = 17
-    BAR_SPACING = 17
+    BAR_WIDTH = 20
+    BAR_SPACING = 24
     EDGE_OFFSET = 3
     mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 
@@ -77,6 +77,32 @@ def editwindow(transactiondata, categorylist):
     return newcat
 
 
+def catsummarywindow(transactiondata):
+    # print('transactiondata ->', transactiondata)
+    sg.SetOptions(element_padding=(2, 2))
+    cstransaction_headings = [['Description'], ['Amount'], ['Categoryt']]
+    layout = [[sg.Table(transactiondata,
+                            headings=cstransaction_headings,
+                            max_col_width=40,
+                            auto_size_columns=True,
+                            justification='right',
+                            display_row_numbers=True,
+                            alternating_row_color=mediumblue2,
+                            num_rows=20,
+                            enable_events=True,
+                            key='-CSTRANSTABLE-')],
+                [sg.Exit()]]
+
+    cswindow = sg.Window('Edit Transaction', grab_anywhere=False, keep_on_top=True).Layout(layout)
+    transactionkey = str(transactiondata[0])
+
+    while True:
+        event, values = cswindow.Read()
+        if event is None or event == "Exit":
+            cswindow.Close()
+            break
+
+
 def runsql(conn, sqlstring, rowdata=None):
     """
     :param conn:
@@ -97,6 +123,7 @@ def runsql(conn, sqlstring, rowdata=None):
         conn.commit()
         # print('commit succeeded')
         sqloutput = curr.fetchall()
+        # print('sqloutput ->', sqloutput)
         return sqloutput
     except Error as e:
         print(e)
@@ -238,6 +265,16 @@ def getnewtransactions(conn, tablename):
         print ('getnewtransactions worked')
     sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
     # sg.Popup('sqloutput=>', sqloutput)
+    return sqloutput
+
+
+def fillcstransactions(conn, cscategory):
+    sqlstr = ' SELECT TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
+    sqlstr = sqlstr + ' from TransactionList WHERE Category = \'' + cscategory + '\' ;'
+    # print('sqlstr ->', sqlstr)
+    sqloutput = runsql(conn, sqlstr)
+    sqloutput = [list(ele) for ele in sqloutput]
+
     return sqloutput
 
 
@@ -663,8 +700,15 @@ def main():
             drawgraph(dailybalancelist, graph, scalefactor=40, lableangle=90)
 
         elif event == '-RUNSPENDGRAPH-':
-
             drawgraph(dailysummarylist, spendgraph, scalefactor=12, lableangle=90, flipgraph=True)
+
+        elif event == '-SUMMARYLISTTABLE-':
+            rowid = int(values['-SUMMARYLISTTABLE-'][0])
+            # sg.Popup('summary category =>', summarylist[rowid][0])
+            cscategory = summarylist[rowid][0]
+            # print('cscategory =>', cscategory)
+            catsummarytransactions = fillcstransactions(conn, cscategory)
+            catsummarywindow(catsummarytransactions)
 
 
 # ##########################################
