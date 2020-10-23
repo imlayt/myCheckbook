@@ -223,16 +223,24 @@ def getcategories(conn, tablename):
     return thecategories
 
 def gettransactions(conn, tablename):
-    sqlstring = 'SELECT Transaction_Id, Trans, Amount, Posted_Date, Category FROM '
+    sqlstring = 'SELECT Transaction_Id, Trans, Posted_Date, Category, Amount FROM '
     sql = sqlstring + tablename + ' ORDER BY Transaction_Id ; '
     # sg.Popup('sql ->', sql)
     thetransactions = runsql(conn, sql)
 
     # res = [list(ele) for ele in test_list]
     if thetransactions:
-        thetransactions = [list(ele) for ele in thetransactions]
+        newtranslist = ['{:03.2f}'.format(x[4]) for x in thetransactions]
 
-    return thetransactions
+        thetransactions = [list(ele) for ele in thetransactions]
+        # print('newtranslist', list(newtranslist))
+        translist = [j[:4] for j in thetransactions]
+
+        for tr in range(len(newtranslist)):
+            translist[tr].append(newtranslist[tr])
+        # print('summarylist ->', summarylist)
+
+    return translist
 
 
 def transupdatethecategory(conn, thenewcategory):
@@ -517,7 +525,7 @@ def main():
                                     headings=myheadings,
                                     max_col_width=40,
                                     auto_size_columns=True,
-                                    justification='left',
+                                    justification='right',
                                     display_row_numbers=True,
                                     alternating_row_color=mediumblue2,
                                     num_rows=22,
