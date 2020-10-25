@@ -9,4 +9,4 @@ The user interface is created using PySimpleGUI (a great toolkit).
 ![myCheckbook screenshot](/myCheckbook-balancegraph.png)
 ![myCheckbook screenshot](/myCheckbook-spendinggraph.png)
 ![myCheckbook screenshot](/myCheckbook-summary.png)
-![myCheckbook screenshot](/myCheckbook-newtransactions.png)
+![myCheckbook screenshot](/myCheckbook-newtransaactions.png)
