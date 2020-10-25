@@ -6,4 +6,7 @@ This is still just a crude shell. It reads data from a SQLite3 database. One tab
 The user interface is created using PySimpleGUI (a great toolkit).
 
 ![myCheckbook screenshot](/myCheckbook.png)
-![myCheckbook screenshot](/myCheckbook-graph.png)
+![myCheckbook screenshot](/myCheckbook-balancegraph.png)
+![myCheckbook screenshot](/myCheckbook-spendinggraph.png)
+![myCheckbook screenshot](/myCheckbook-summary.png)
+![myCheckbook screenshot](/myCheckbook-newtransactions.png)
