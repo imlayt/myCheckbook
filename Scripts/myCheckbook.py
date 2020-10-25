@@ -767,17 +767,20 @@ def main():
             # sg.Popup('this button is not yet implemented')
             if truncateinputtable(conn, 'history_download'):
                 print('truncate success')
-                if loadcsvfiletodb(conn, values['-CSVFILENAME-'], 'history_download'):
-                    print('loadcsvfiletodb success')
-                    if (appendnewtransactions(conn, 'history_download')):
-                        print('appendnewtransactions success')
+                if len(values['-CSVFILENAME-']) > 0:
+                    if loadcsvfiletodb(conn, values['-CSVFILENAME-'], 'history_download'):
+                        print('loadcsvfiletodb success')
+                        if (appendnewtransactions(conn, 'history_download')):
+                            print('appendnewtransactions success')
+                        else:
+                            print('appendnewtransactions failed')
                     else:
-                        print('appendnewtransactions failed')
+                        print('loadcsvfiletodb failed')
                 else:
-                    print('loadcsvfiletodb failed')
+                    print('filename is empty')
+                    sg.Popup('Please select a filename.')
             else:
                 print('truncateinputtable failed')
-
 
 
 # ##########################################
