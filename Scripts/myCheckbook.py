@@ -1,9 +1,11 @@
 import os
 import sqlite3
 import sys
+import csv
 from datetime import date
 from sqlite3 import Error
 import PySimpleGUI as sg
+from six import string_types, text_type
 
 my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
 # my_db_file = 'myFinances-AppData.db'
@@ -50,9 +52,9 @@ def editwindow(transactiondata, categorylist):
 
     layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(transactiondata[0], key='-EWKEY-', disabled=True)],
               [sg.T('Transaction', size=(15, 1)), sg.In(transactiondata[1], key='-EWTRANS-', disabled=True)],
-              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[2], key='-EWAMOUNT-', disabled=True)],
-              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[3], key='-EWDATE-', disabled=True)],
-              [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[4],
+              [sg.T('Date', size=(15, 1)), sg.In(transactiondata[2], key='-EWDATE-', disabled=True)],
+              [sg.T('Amount', size=(15, 1)), sg.In(transactiondata[4], key='-EWAMOUNT-', disabled=True)],
+              [sg.T('Category', size=(15, 1)), sg.Combo(categorylist,default_value=transactiondata[3],
                       key='-EWCATEGORY-', enable_events=True)],
               [sg.Exit(), sg.Button('Save', key='-EWSAVE-')],
               [sg.T("Exit doesn't save the changes")]]
@@ -114,7 +116,7 @@ def runsql(conn, sqlstring, rowdata=None):
     try:
         curr = conn.cursor()
         # print('curr creation succeeded')
-        # print('sqlstring ->', sqlstring)
+        # print('sqlstring / rowdata ->', sqlstring, '/', rowdata)
         if rowdata:
             curr.execute(sqlstring, rowdata)
         else:
@@ -124,7 +126,10 @@ def runsql(conn, sqlstring, rowdata=None):
         # print('commit succeeded')
         sqloutput = curr.fetchall()
         # print('sqloutput  ->', sqloutput)
-        return sqloutput
+        if len(sqloutput) == 0:
+            return True
+        else:
+            return sqloutput
     except Error as e:
         print(e)
         print('runsql FAILED(', rowdata, ')')
@@ -133,7 +138,6 @@ def runsql(conn, sqlstring, rowdata=None):
 
 def tableexists(datafile, datatable):
     """
-
     :param: datafile
     :param: datatable
     :return: True if successful else False
@@ -263,14 +267,11 @@ def catupdatethecategory(conn, catcategory):
         sqloutput = runsql(conn, sqlstr, catcategory)
         print('sqloutput ->', sqloutput)
 
-def getnewtransactions(conn, tablename):
-    # print('tablename ->', tablename[1:len(tablename)-2])
-    # tablename = [list(ele) for ele in tablename]
-    # print('tablename ->', tablename[1:len(tablename)-2])
-    sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename[1:len(tablename)-2] + ' ;'
+def appendnewtransactions(conn, tablename):
+    sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename + ' ;'
     # print(sqlstr)
     if runsql(conn, sqlstr):
-        print ('getnewtransactions worked')
+        print ('appendnewtransactions worked')
     sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
     # sg.Popup('sqloutput=>', sqloutput)
     return sqloutput
@@ -282,7 +283,6 @@ def fillcstransactions(conn, cscategory):
     # print('sqlstr  ->', sqlstr)
     sqloutput = runsql(conn, sqlstr)
     sqloutput = [list(ele) for ele in sqloutput]
-
     return sqloutput
 
 
@@ -414,6 +414,70 @@ def filldailybalancelist(conn, summarystart=None, summaryend=None):
     # print('sqlout ->', sqloutput)
     return summarylist
 
+def truncateinputtable(conn, tablename):
+    sqlstr = 'DELETE FROM ' + tablename + ' ;'
+    if runsql(conn, sqlstr):
+        return True
+    else:
+        return False
+
+
+def open_csv_file(filepath_or_fileobj):
+    # sg.Popup('open_csv_file')
+    if isinstance(filepath_or_fileobj, string_types):
+        fo = open(filepath_or_fileobj, mode='rt')
+    return fo
+
+
+# convert the CSV file to a sqlite3 table
+def loadcsvfiletodb(conn, filepath_or_fileobj, table):
+    global headersandtypes
+    global dialect
+
+    # fill the headers and types list boxes - get file object back
+    # fo = fillheadersandtypes(filepath_or_fileobj, window)
+    fo = open(filepath_or_fileobj, mode='rt')
+
+    # now get columns headers and types
+    # _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes])
+
+    # sg.Popup('_columns=', _columns,keep_on_top=True)
+
+
+    fo = open_csv_file(filepath_or_fileobj)
+    try:
+        dialect = csv.Sniffer().sniff(fo.readline())
+    except TypeError:
+        dialect = csv.Sniffer().sniff(str(fo.readline()))
+    fo.seek(0)
+    reader = csv.reader(fo, dialect)
+    # Skip the header
+    next(reader)
+
+    # conn = sqlite3.connect(dbpath)
+    # shz: fix error with non-ASCII input
+    conn.text_factory = str
+    c = conn.cursor()
+
+    # if tableexists(conn, table):
+    #     sg.Popup('Table already exists, please enter a different one: ', table)
+    #     return False
+
+    # _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
+    sqlstr = 'INSERT INTO  %s  VALUES (%s) ' % (table, ','.join(['?'] * 13))
+    # check each row and each column in the row
+    # if the field type is integer or real, remove (), #, comma, space, and change a leading ( into a leading -
+    # this is necessary for the data to load properly into the database
+    for row in reader:
+        runsql(conn, sqlstr, row)
+        # c.execute(_insert_tmpl, row)
+    # commit the changes
+    conn.commit()
+    c.close()
+
+    # the data was converted successfully
+    return True
+
 
 def main():
 
@@ -427,7 +491,8 @@ def main():
     if conn is not None:
         try:
             if tableexists(my_db_file,'TransactionList'):
-                print('TransactionList exists')
+                # print('TransactionList exists')
+                pass
         except:
             sg.Popup('FAILED to find the tables')
             sys.exit(1)
@@ -458,7 +523,7 @@ def main():
     catnotes = ''
     # print('Categories', categorylist)
 
-    myheadings = ['Trans_ID', 'Transaction', 'Amount', 'Posted', 'Category']
+    myheadings = ['Trans_ID', 'Transaction', 'Posted', 'Category', 'Amount']
     categoryheadings = ['ID', 'Category', 'Notes']
 
     # PySimpleGUI screen layout
@@ -558,24 +623,19 @@ def main():
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
-    newtranstab_layout = [[sg.T('new newtrans tab')],
+
+    newtranstabcol1_layout = [[sg.T('new newtrans tab')],
                           [sg.Listbox(tablenamelist, size=(30, 10) , enable_events=True, key='-TABLENAMELIST-')],
                           [sg.In(csvtablename, size=(30, 1), key='-CSVTABLENAME-')],
-                          [ sg.B('List Tables', key='-NEWTABLELIST-'), sg.B('Add New Transactions', key='-NEWT-')]]
+                          [ sg.B('List Tables', key='-NEWTABLELIST-')]]
 
-    transactionlistbox_layout = [[sg.Menu(menu_def, )],
-                           [sg.Table(transactionlist,
-                            headings=myheadings,
-                            max_col_width=40,
-                            auto_size_columns=True,
-                            justification='left',
-                            display_row_numbers=True,
-                            alternating_row_color=mediumblue2,
-                            num_rows=10,
-                            enable_events=True,
-                            tooltip='Old Transactions',
-                            key='-OLDTRANSACTIONLISTBOX-')],
-                            [sg.Button('Edit Transaction', key='-EDITOLDTRANSACTION-')]]
+    newtranstabcol2_layout = [[sg.Text('Filename', justification='center', size=(25, 1))],
+        [sg.Text('CSV File Name', justification='right', size=(15, 1)),
+         sg.InputText(key='-CSVFILENAME-', size=(80, 1), enable_events=True),
+         sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
+        [sg.Button('Load CSV file and add new transactions', key='-LOADCSVFILE-', disabled=False)]]
+
+    newtranstab_layout = [[sg.Column(newtranstabcol1_layout), sg.Column(newtranstabcol2_layout)]]
 
     mainscreenlayout = [
                         [sg.Menu(menu_def, )],
@@ -652,20 +712,6 @@ def main():
             categorylist = getcategories(conn, 'Categories')
             window['-CATEGORYLISTBOX-'](categorylist)
             window.refresh
-        
-        elif event == '-NEWT-':
-            inputtable = values['-CSVTABLENAME-']
-            # print('inputtable ->', inputtable)
-            if len(inputtable) > 0:
-                newrecordcount = getnewtransactions(conn, inputtable)
-                messagetxt = []
-                messagetxt.append ('new rec count => ')
-                messagetxt.append( newrecordcount)
-                setmessage(messagetxt, window )
-                transactionlist = gettransactions(conn, 'Transactionlist')
-                window['-TRANSACTIONLISTBOX-'](transactionlist)
-            else:
-                sg.Popup('inputtable is empty')
 
         elif event == '-NEWTABLELIST-':
             tablenamelist = gettablenames(conn)
@@ -716,6 +762,22 @@ def main():
             # print('cscategory ->', cscategory)
             catsummarytransactions = fillcstransactions(conn, cscategory)
             catsummarywindow(catsummarytransactions)
+
+        elif event == '-LOADCSVFILE-':
+            # sg.Popup('this button is not yet implemented')
+            if truncateinputtable(conn, 'history_download'):
+                print('truncate success')
+                if loadcsvfiletodb(conn, values['-CSVFILENAME-'], 'history_download'):
+                    print('loadcsvfiletodb success')
+                    if (appendnewtransactions(conn, 'history_download')):
+                        print('appendnewtransactions success')
+                    else:
+                        print('appendnewtransactions failed')
+                else:
+                    print('loadcsvfiletodb failed')
+            else:
+                print('truncateinputtable failed')
+
 
 
 # ##########################################
