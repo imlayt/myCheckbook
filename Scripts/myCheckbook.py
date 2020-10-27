@@ -1,3 +1,14 @@
+
+"""
+    myCheckbook is a python script to track/analyze a personal checking account.
+    Input: bank transaction data downloaded in CSV format
+    Storage: Sqlite3 database in a local disk file
+    written by Tom Imlay
+    (c) Copyright 2020
+
+"""
+
+
 import os
 import sqlite3
 import sys
@@ -769,9 +780,12 @@ def main():
                 print('truncate success')
                 if len(values['-CSVFILENAME-']) > 0:
                     if loadcsvfiletodb(conn, values['-CSVFILENAME-'], 'history_download'):
-                        print('loadcsvfiletodb success')
+                        # print('loadcsvfiletodb success')
                         if (appendnewtransactions(conn, 'history_download')):
-                            print('appendnewtransactions success')
+                            transactionlist = gettransactions(conn, 'Transactionlist')
+                            window['-TRANSACTIONLISTBOX-'](transactionlist)
+                            window.Refresh()
+                            # print('appendnewtransactions success')
                         else:
                             print('appendnewtransactions failed')
                     else:
