@@ -593,6 +593,7 @@ def main():
 
     graph = sg.Graph((750, 500), (0, -150), (750, 500))
     spendgraph = sg.Graph((750, 500), (0, -150), (750, 500))
+    categorygraph = sg.Graph((750, 500), (0, -500), (750, 500))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
@@ -614,6 +615,9 @@ def main():
 
     dailyspend_layout = [[sg.Button('Show spending graph', key=('-RUNSPENDGRAPH-'))],
                            [spendgraph]]
+
+    categoryspend_layout = [[sg.Button('Show category graph', key=('-RUNCATEGORYGRAPH-'))],
+                           [categorygraph]]
 
     forecasttranstab_layout = [[sg.T('forecast transactions')]]
 
@@ -657,6 +661,7 @@ def main():
                                 [sg.Tab('Summary', summarytab_layout, background_color=charcoal)],
                                 [sg.Tab('Daily Balance Graph', dailybalance_layout, background_color=charcoal)],
                                 [sg.Tab('Daily Spending Graph', dailyspend_layout, background_color=charcoal)],
+                                [sg.Tab('Category Spending Graph', categoryspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
                                 [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
                                 ])
@@ -770,6 +775,9 @@ def main():
 
         elif event == '-RUNSPENDGRAPH-':
             drawgraph(dailysummarylist, spendgraph, scalefactor=12, lableangle=90, flipgraph=True)
+
+        elif event == '-RUNCATEGORYGRAPH-':
+            drawgraph(summarylist, categorygraph, scalefactor=15, lableangle=90, flipgraph=True)
 
         elif event == '-SUMMARYLISTTABLE-':
             rowid = int(values['-SUMMARYLISTTABLE-'][0])
