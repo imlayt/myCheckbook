@@ -46,6 +46,7 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
     graph.erase()
     for i in (range(len(datalist))):
         display_value = (float(datalist[i][1])).__round__(0)
+        other_value = datalist[i][0]
         graph_value = (float(datalist[i][1])/scalefactor).__round__(0)    # divide by scalefactor to make the bars fit on the chart
         # print('graph_value', graph_value)
         if flipgraph:
@@ -55,7 +56,8 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
                 bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
         graph.draw_text(text=str(display_value),
             location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 40), color='white', font=myfont, angle=lableangle)
-
+        graph.draw_text(text=str(other_value),
+            location=(i * BAR_SPACING + EDGE_OFFSET + 17, -50), color='white', font=myfont, angle=lableangle)
 
 def editwindow(transactiondata, categorylist):
 
@@ -589,8 +591,8 @@ def main():
                           sg.CalendarButton('Calendar', target=(3, 1), size=(15, 1)),
                           sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graphs.')]]
 
-    graph = sg.Graph((750, 250), (0, -100), (750, 250))
-    spendgraph = sg.Graph((750, 250), (0, -20), (750, 250))
+    graph = sg.Graph((750, 500), (0, -150), (750, 500))
+    spendgraph = sg.Graph((750, 500), (0, -150), (750, 500))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
@@ -687,17 +689,20 @@ def main():
             window.Refresh()
 
         elif event == '-TRANSACTIONLISTBOX-':
-            rowid = int(values['-TRANSACTIONLISTBOX-'][0])
-            # sg.Popup('transaction ->', transactionlist[rowid][0])
-            thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
-            # sg.Popup('thenewcategory ->', thenewcategory)
-            if len(thenewcategory) > 1:
-                # sg.Popup('thenewcategory is ->', thenewcategory[0])
-                transupdatethecategory(conn, thenewcategory)
-                ewcategorylist = ewgetcategories(conn, 'Categories')
-                transactionlist = gettransactions(conn, 'Transactionlist')
-                window['-TRANSACTIONLISTBOX-'](transactionlist)
-                window.Refresh()
+            try:
+                rowid = int(values['-TRANSACTIONLISTBOX-'][0])
+                # sg.Popup('transaction ->', transactionlist[rowid][0])
+                thenewcategory = editwindow(transactionlist[rowid], ewcategorylist)
+                # sg.Popup('thenewcategory ->', thenewcategory)
+                if len(thenewcategory) > 1:
+                    # sg.Popup('thenewcategory is ->', thenewcategory[0])
+                    transupdatethecategory(conn, thenewcategory)
+                    ewcategorylist = ewgetcategories(conn, 'Categories')
+                    transactionlist = gettransactions(conn, 'Transactionlist')
+                    window['-TRANSACTIONLISTBOX-'](transactionlist)
+                    window.Refresh()
+            except:
+                continue
 
         elif event == '-NEWTRANSACTIONLISTBOX-':
             rowid = int(values['-NEWTRANSACTIONLISTBOX-'][0])
