@@ -3,8 +3,28 @@
     myCheckbook is a python script to track/analyze a personal checking account.
     Input: bank transaction data downloaded in CSV format
     Storage: Sqlite3 database in a local disk file
-    written by Tom Imlay
-    (c) Copyright 2020
+
+MIT License
+
+Copyright (c) 2020 Tom Imlay
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 """
 
@@ -19,7 +39,7 @@ import PySimpleGUI as sg
 from six import string_types, text_type
 
 my_db_file = 'C:/Users/imlay/Downloads/myCheckbook_appdata.db'
-# my_db_file = 'myFinances-AppData.db'
+# my_db_file = '../myCheckbook_appdata.db'
 
 lightblue = '#b9def4'  # color used by PySimpleGUIdef __init__(self, logfile, table='LogEntries'):
 mediumblue = '#d2d2df'  # color used by PySimpleGUI
@@ -33,7 +53,7 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
 
     BAR_WIDTH = 20
     BAR_SPACING = 24
-    EDGE_OFFSET = 3
+    EDGE_OFFSET = 0
     mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 
     myfont = "Ariel 10"
@@ -55,9 +75,9 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
         graph.draw_rectangle(top_left=(i * BAR_SPACING + EDGE_OFFSET, graph_value),
                 bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
         graph.draw_text(text=str(display_value),
-            location=(i * BAR_SPACING + EDGE_OFFSET + 17, graph_value + 40), color='white', font=myfont, angle=lableangle)
+            location=(i * BAR_SPACING + EDGE_OFFSET + 10, graph_value + 40), color='white', font=myfont, angle=lableangle)
         graph.draw_text(text=str(other_value),
-            location=(i * BAR_SPACING + EDGE_OFFSET + 17, -50), color='white', font=myfont, angle=lableangle)
+            location=(i * BAR_SPACING + EDGE_OFFSET + 10, -80), color='white', font=myfont, angle=lableangle)
 
 def editwindow(transactiondata, categorylist):
 
@@ -91,11 +111,10 @@ def editwindow(transactiondata, categorylist):
 
     return newcat
 
-
-def catsummarywindow(transactiondata):
+def summarywindow(transactiondata):
     # print('transactiondata  ->', transactiondata)
     sg.SetOptions(element_padding=(2, 2))
-    cstransaction_headings = [['Description'], ['Amount'], ['Categoryt']]
+    cstransaction_headings = [['Posted_Date'], ['Description'], ['Amount'], ['Category']]
     layout = [[sg.Table(transactiondata,
                             headings=cstransaction_headings,
                             max_col_width=40,
@@ -291,11 +310,21 @@ def appendnewtransactions(conn, tablename):
 
 
 def fillcstransactions(conn, cscategory):
-    sqlstr = ' SELECT TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
-    sqlstr = sqlstr + ' from TransactionList WHERE Category = \'' + cscategory + '\' ;'
+    sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
+    sqlstr = sqlstr + ' from TransactionList WHERE Category = \'' + cscategory + '\' ORDER BY Posted_Date ;'
     # print('sqlstr  ->', sqlstr)
     sqloutput = runsql(conn, sqlstr)
     sqloutput = [list(ele) for ele in sqloutput]
+    return sqloutput
+
+
+def filldstransactions(conn, dsdate):
+    sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
+    sqlstr = sqlstr + ' from TransactionList WHERE Posted_Date = \'' + dsdate + '\' ORDER BY Posted_Date ;'
+    print('sqlstr  ->', sqlstr)
+    sqloutput = runsql(conn, sqlstr)
+    if len(sqloutput) > 1:
+        sqloutput = [list(ele) for ele in sqloutput]
     return sqloutput
 
 
@@ -569,6 +598,7 @@ def main():
                                   alternating_row_color=mediumblue2,
                                   num_rows=20,
                                   enable_events=True,
+                                  tooltip='click on a date to drill-down',
                                   key='-DAILYSUMMARYLISTTABLE-'),
                           sg.Table(dailybalancelist,
                                   headings=dailysummaryheadings,
@@ -785,7 +815,15 @@ def main():
             cscategory = summarylist[rowid][0]
             # print('cscategory ->', cscategory)
             catsummarytransactions = fillcstransactions(conn, cscategory)
-            catsummarywindow(catsummarytransactions)
+            summarywindow(catsummarytransactions)
+
+        elif event == '-DAILYSUMMARYLISTTABLE-':
+            rowid = int(values['-DAILYSUMMARYLISTTABLE-'][0])
+            # sg.Popup('summary category ->', summarylist[rowid][0])
+            dsdate = dailysummarylist[rowid][0]
+            # print('cscategory ->', cscategory)
+            datesummarytransactions = filldstransactions(conn, dsdate)
+            summarywindow(datesummarytransactions)
 
         elif event == '-LOADCSVFILE-':
             # sg.Popup('this button is not yet implemented')
