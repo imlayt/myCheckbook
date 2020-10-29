@@ -215,7 +215,7 @@ def setmessage(message, window):
     :return:
     """
     # print('new message => ', message)
-    window.FindElement('-MESSAGEAREA-').Update(message)
+    window['-MESSAGEAREA-'](message)
     window.Refresh()
 
 
@@ -321,7 +321,7 @@ def fillcstransactions(conn, cscategory):
 def filldstransactions(conn, dsdate):
     sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
     sqlstr = sqlstr + ' from TransactionList WHERE Posted_Date = \'' + dsdate + '\' ORDER BY Posted_Date ;'
-    print('sqlstr  ->', sqlstr)
+    #   ->', sqlstr)
     sqloutput = runsql(conn, sqlstr)
     if len(sqloutput) > 1:
         sqloutput = [list(ele) for ele in sqloutput]
@@ -349,13 +349,13 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
 
     if summarystart is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
+        sqlstr = sqlstr + ' GROUP By Category ORDER by sum(Amount);'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
         sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
-                 '\'   GROUP By Category ORDER by Category;'
+                 '\'   GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
@@ -363,7 +363,7 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
         sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
                  '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
-        sqlstr = sqlstr + ' GROUP By Category ORDER by Category;'
+        sqlstr = sqlstr + ' GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
@@ -575,7 +575,7 @@ def main():
                 ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
                 ['&Help', '&About...'] , ]
 
-    summarytab_layout = [[sg.T('Summary by Category', size=(30, 1), justification='center'),
+    summarytab_layout = [[sg.T('Category Summary', size=(30, 1), justification='center'),
                           sg.T('Daily Spend Summary', size=(26, 1), justification='center'),
                           sg.T('Daily Balance Summary', size=(25, 1), justification='center')],
                           [sg.Table(summarylist,
@@ -621,9 +621,9 @@ def main():
                           sg.CalendarButton('Calendar', target=(3, 1), size=(15, 1)),
                           sg.T('use the calendar buttons to adjust the dates in the summary boxes and for the graphs.')]]
 
-    graph = sg.Graph((750, 500), (0, -150), (750, 500))
-    spendgraph = sg.Graph((750, 500), (0, -150), (750, 500))
-    categorygraph = sg.Graph((750, 500), (0, -500), (750, 500))
+    graph = sg.Graph((900, 500), (0, -150), (900, 500))
+    spendgraph = sg.Graph((900, 500), (0, -150), (900, 500))
+    categorygraph = sg.Graph((900, 500), (0, -500), (900, 500))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
@@ -637,7 +637,7 @@ def main():
                                     justification='right',
                                     display_row_numbers=True,
                                     alternating_row_color=mediumblue2,
-                                    num_rows=22,
+                                    num_rows=25,
                                     enable_events=True,
                                     tooltip='Transactions from bank',
                                     key='-TRANSACTIONLISTBOX-')]
