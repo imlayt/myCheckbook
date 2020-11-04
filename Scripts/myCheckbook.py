@@ -33,6 +33,7 @@ import os
 import sqlite3
 import sys
 import csv
+import datetime
 from datetime import date
 from sqlite3 import Error
 import PySimpleGUI as sg
@@ -54,7 +55,6 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
     BAR_WIDTH = 20
     BAR_SPACING = 24
     EDGE_OFFSET = 0
-    mediumgreen2 = '#00aaaa'  # color used by PySimpleGUIs
 
     myfont = "Ariel 10"
     if scalefactor is None:
@@ -66,7 +66,7 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
     graph.erase()
     for i in (range(len(datalist))):
         display_value = (float(datalist[i][1])).__round__(0)
-        other_value = datalist[i][0]
+        lable_value = datalist[i][0]
         graph_value = (float(datalist[i][1])/scalefactor).__round__(0)    # divide by scalefactor to make the bars fit on the chart
         # print('graph_value', graph_value)
         if flipgraph:
@@ -76,8 +76,8 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
                 bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
         graph.draw_text(text=str(display_value),
             location=(i * BAR_SPACING + EDGE_OFFSET + 10, graph_value + 40), color='white', font=myfont, angle=lableangle)
-        graph.draw_text(text=str(other_value),
-            location=(i * BAR_SPACING + EDGE_OFFSET + 10, -80), color='white', font=myfont, angle=lableangle)
+        graph.draw_text(text=str(lable_value),
+            location=(i * BAR_SPACING + EDGE_OFFSET + 10, -90), color='white', font=myfont, angle=lableangle)
 
 def editwindow(transactiondata, categorylist):
 
@@ -236,7 +236,7 @@ def db_connection(db_file):
 
 def ewgetcategories(conn, tablename):
     sqlstring = 'SELECT Category, Notes FROM '
-    sql = sqlstring + tablename + ' ; '
+    sql = sqlstring + tablename + ' ORDER BY Category ; '
     # sg.Popup('sql ->', sql)
     thecategories = runsql(conn, sql)
 
@@ -248,7 +248,7 @@ def ewgetcategories(conn, tablename):
 
 def getcategories(conn, tablename):
     sqlstring = 'SELECT * FROM '
-    sql = sqlstring + tablename + ' ; '
+    sql = sqlstring + tablename + ' ORDER BY Category ; '
     # sg.Popup('sql ->', sql)
     thecategories = runsql(conn, sql)
 
@@ -278,6 +278,17 @@ def gettransactions(conn, tablename):
 
     return translist
 
+'''
+def getdbfilename(defaultfilename, window, thecsvfile=None):
+    dbfilename = 'UNKNOWN'
+    dbfilename = sg.PopupGetFile('Please enter a database file name',
+                default_path=defaultfilename, keep_on_top=True, file_types=(("Sqlite Files", "*.db"),))
+    if not os.path.isfile(dbfilename) and thecsvfile is not None:
+        dbfilename = thecsvfile.replace('.csv', '.db')
+        sg.Popup('No database File Found - a new file will be created', dbfilename, keep_on_top=True)
+
+    return dbfilename
+'''
 
 def transupdatethecategory(conn, thenewcategory):
     # 'update TransactionList SET Category = "test category" where Transaction_Id = "20200926_237442"'
@@ -303,15 +314,22 @@ def appendnewtransactions(conn, tablename):
     sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename + ' ;'
     # print(sqlstr)
     if runsql(conn, sqlstr):
-        print ('appendnewtransactions worked')
-    sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
+        # print ('appendnewtransactions worked')
+        sqloutput = runsql(conn, 'SELECT count(*) FROM TransactionList;')
     # sg.Popup('sqloutput=>', sqloutput)
     return sqloutput
 
 
-def fillcstransactions(conn, cscategory):
+def fillcstransactions(conn, cscategory, start, end):
+    '''
+    :param conn:
+    :param cscategory:
+    :return:
+    '''
     sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
-    sqlstr = sqlstr + ' from TransactionList WHERE Category = \'' + cscategory + '\' ORDER BY Posted_Date ;'
+    sqlstr = sqlstr + ' from TransactionList '
+    sqlstr = sqlstr + 'WHERE (Category = \'' + cscategory + '\') AND (Posted_Date >= \'' + start + '\') AND (Posted_Date <= \'' + end + '\')'
+    sqlstr = sqlstr + ' ORDER BY Posted_Date ;'
     # print('sqlstr  ->', sqlstr)
     sqloutput = runsql(conn, sqlstr)
     sqloutput = [list(ele) for ele in sqloutput]
@@ -354,15 +372,15 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
 
     elif summaryend is None:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
                  '\'   GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
         sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date > \'' + summarystart + \
-                 '\' AND  TransactionList.Posted_Date < \'' + summaryend + '\''
+        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
+                 '\' AND  TransactionList.Posted_Date <= \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -476,16 +494,6 @@ def loadcsvfiletodb(conn, filepath_or_fileobj, table):
     global headersandtypes
     global dialect
 
-    # fill the headers and types list boxes - get file object back
-    # fo = fillheadersandtypes(filepath_or_fileobj, window)
-    fo = open(filepath_or_fileobj, mode='rt')
-
-    # now get columns headers and types
-    # _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes])
-
-    # sg.Popup('_columns=', _columns,keep_on_top=True)
-
-
     fo = open_csv_file(filepath_or_fileobj)
     try:
         dialect = csv.Sniffer().sniff(fo.readline())
@@ -496,23 +504,14 @@ def loadcsvfiletodb(conn, filepath_or_fileobj, table):
     # Skip the header
     next(reader)
 
-    # conn = sqlite3.connect(dbpath)
-    # shz: fix error with non-ASCII input
     conn.text_factory = str
     c = conn.cursor()
 
-    # if tableexists(conn, table):
-    #     sg.Popup('Table already exists, please enter a different one: ', table)
-    #     return False
-
-    # _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
     sqlstr = 'INSERT INTO  %s  VALUES (%s) ' % (table, ','.join(['?'] * 13))
-    # check each row and each column in the row
-    # if the field type is integer or real, remove (), #, comma, space, and change a leading ( into a leading -
-    # this is necessary for the data to load properly into the database
+
     for row in reader:
         runsql(conn, sqlstr, row)
-        # c.execute(_insert_tmpl, row)
+
     # commit the changes
     conn.commit()
     c.close()
@@ -525,7 +524,6 @@ def main():
 
     if validatedatafile(my_db_file):
         conn = db_connection(my_db_file)
-        # fileinfo = my_db_file
     else:
         conn = None
         sg.Popup('db file %s does not exist', my_db_file)
@@ -533,7 +531,6 @@ def main():
     if conn is not None:
         try:
             if tableexists(my_db_file,'TransactionList'):
-                # print('TransactionList exists')
                 pass
         except:
             sg.Popup('FAILED to find the tables')
@@ -548,32 +545,26 @@ def main():
     summarylist = fillsummarylist(conn)
 
     summaryheadings = ['Category', 'Amount']
-    summarystartdate = date.today()
+
+    summarystartdate = date.today() - datetime.timedelta(days=14)
     summaryenddate = date.today()
 
     dailysummarylist = filldailysummarylist(conn)
     dailysummaryheadings = ['Day', 'Amount']
-    # print('dailysummarylist ->', dailysummarylist)
-
     dailybalancelist = filldailybalancelist(conn)
-    dailysummaryheadings = ['Day', 'Amount']
 
     categorylist = getcategories(conn, 'Categories')
     ewcategorylist = ewgetcategories(conn, 'Categories')
     catid = '0'
     cat = ''
     catnotes = ''
-    # print('Categories', categorylist)
 
     myheadings = ['Trans_ID', 'Transaction', 'Posted', 'Category', 'Amount']
     categoryheadings = ['ID', 'Category', 'Notes']
 
     # PySimpleGUI screen layout
     # ------ Menu Definition ------ #
-    menu_def = [['&File', ['&Open', '&Save', '&Properties', 'E&xit']],
-                ['&Edit', ['&Paste', ['Special', 'Normal', ], 'Undo'], ],
-                ['&Toolbar', ['---', 'Command &1', 'Command &2', '---', 'Command &3', 'Command &4']],
-                ['&Help', '&About...'] , ]
+    menu_def = [['&File', ['E&xit'] , ]]
 
     summarytab_layout = [[sg.T('Category Summary', size=(30, 1), justification='center'),
                           sg.T('Daily Spend Summary', size=(26, 1), justification='center'),
@@ -614,7 +605,7 @@ def main():
                          [sg.T('Start Date', size=(15, 1)), sg.T('End Date', size=(15, 1))],
                          [sg.In(str(summarystartdate), size=(17, 1),key='-SUMMARYSTARTDATE-'),
                           sg.In(str(summaryenddate), size=(17, 1), key='-SUMMARYENDDATE-'),
-                          sg.Button('Run CategoryReport', key=('-RUNREPORT-')),
+                          sg.Button('Run CategoryReport', key=('-RUNCATEGORYREPORT-')),
                           sg.Button('Run Daily Report', key=('-RUNDAILYREPORT-')),
                           sg.Button('Run Daily Balance', key=('-RUNDAILYBALANCEREPORT-'))],
                          [sg.CalendarButton('Calendar', target=(3, 0), size=(15, 1)),
@@ -623,7 +614,7 @@ def main():
 
     graph = sg.Graph((900, 500), (0, -150), (900, 500))
     spendgraph = sg.Graph((900, 500), (0, -150), (900, 500))
-    categorygraph = sg.Graph((900, 500), (0, -500), (900, 500))
+    categorygraph = sg.Graph((900, 500), (0, -700), (900, 500))
 
     dailybalance_layout = [[sg.Button('Show balance graph', key=('-RUNGRAPH-'))],
                            [graph]]
@@ -776,7 +767,7 @@ def main():
             window['-CSVTABLENAME-'](csvtablename)
             window.Refresh()
 
-        elif event == '-RUNREPORT-':
+        elif event == '-RUNCATEGORYREPORT-':
             summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
             summaryenddate = values['-SUMMARYENDDATE-'][0:10]
             # sg.Popup('summarystartdate ->', summarystartdate)
@@ -814,7 +805,9 @@ def main():
             # sg.Popup('summary category ->', summarylist[rowid][0])
             cscategory = summarylist[rowid][0]
             # print('cscategory ->', cscategory)
-            catsummarytransactions = fillcstransactions(conn, cscategory)
+            summarystartdate = values['-SUMMARYSTARTDATE-'][0:10]
+            summaryenddate = values['-SUMMARYENDDATE-'][0:10]
+            catsummarytransactions = fillcstransactions(conn, cscategory, summarystartdate, summaryenddate)
             summarywindow(catsummarytransactions)
 
         elif event == '-DAILYSUMMARYLISTTABLE-':
@@ -828,7 +821,7 @@ def main():
         elif event == '-LOADCSVFILE-':
             # sg.Popup('this button is not yet implemented')
             if truncateinputtable(conn, 'history_download'):
-                print('truncate success')
+                # print('truncate success')
                 if len(values['-CSVFILENAME-']) > 0:
                     if loadcsvfiletodb(conn, values['-CSVFILENAME-'], 'history_download'):
                         # print('loadcsvfiletodb success')
