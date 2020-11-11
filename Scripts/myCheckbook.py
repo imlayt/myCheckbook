@@ -35,6 +35,7 @@ import sys
 import csv
 import datetime
 from datetime import date
+import random
 from sqlite3 import Error
 import PySimpleGUI as sg
 from six import string_types, text_type
@@ -73,7 +74,7 @@ def drawgraph(datalist, graph, scalefactor=None, lableangle=None, flipgraph=None
             graph_value = graph_value * -1
 
         graph.draw_rectangle(top_left=(i * BAR_SPACING + EDGE_OFFSET, graph_value),
-                bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumgreen2)
+                bottom_right=(i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color=mediumblue2)
         graph.draw_text(text=str(display_value),
             location=(i * BAR_SPACING + EDGE_OFFSET + 10, graph_value + 40), color='white', font=myfont, angle=lableangle)
         graph.draw_text(text=str(lable_value),
@@ -274,7 +275,7 @@ def gettransactions(conn, tablename):
 
         for tr in range(len(newtranslist)):
             translist[tr].append(newtranslist[tr])
-        # print('summarylist ->', summarylist)
+        # print('translist ->', translist)
 
     return translist
 
@@ -309,6 +310,67 @@ def catupdatethecategory(conn, catcategory):
         """
         sqloutput = runsql(conn, sqlstr, catcategory)
         print('sqloutput ->', sqloutput)
+
+
+def mantransupdate(conn, transid, trans, date, amount, type, category):
+    # catcategory = [ id, cat, note]
+    if transid != '':
+        sqlstr = """
+        UPDATE ManualTransactionList SET 
+        Trans = ?, 
+        Amount = ?, 
+        Posted_Date = ?, 
+        Type = ?,
+        Category = ?
+        WHERE Transaction_Id = ?
+        """
+
+        datalst = [trans, amount, date, type, category, transid]
+        # print('sqlstr ->', sqlstr)
+        # print('datalst ->', datalst)
+        sqloutput = runsql(conn, sqlstr, datalst)
+        # print('sqloutput ->', sqloutput)
+
+
+def mantransinsert(conn, transid, trans, date, amount, type, category):
+    # catcategory = [ id, cat, note]
+    # INSERT INTO ManualTransactionList
+    #
+    # (Transaction_Id, Trans, Amount, Posted_Date, type, Category)
+    #
+    # VALUES ("20201109-999999", "transation name", "0.00", "2020-11-09", "DEBIT", "cash") ;
+
+    sqlstr = """
+    INSERT INTO ManualTransactionList (  
+    Transaction_Id,
+    Trans, 
+    Amount, 
+    Posted_Date, 
+    Type,
+    Category)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """
+
+    datalst = [transid, trans, amount, date, type, category]
+    print('sqlstr ->', sqlstr)
+    print('datalst ->', datalst)
+    sqloutput = runsql(conn, sqlstr, datalst)
+    print('sqloutput ->', sqloutput)
+
+
+
+def mantransdelete(conn, transid):
+    #
+    # DELETE FROM ManualTransactionList	WHERE Transaction_Id = "20201109-999999" ;
+
+    sqlstr = " DELETE FROM ManualTransactionList	WHERE Transaction_Id = ? ; "
+
+    datalst = [transid]
+    print('sqlstr ->', sqlstr)
+    print('datalst ->', datalst)
+    sqloutput = runsql(conn, sqlstr, datalst)
+    print('sqloutput ->', sqloutput)
+
 
 def appendnewtransactions(conn, tablename):
     sqlstr = 'INSERT INTO TransactionList  SELECT * FROM ' + tablename + ' ;'
@@ -520,6 +582,50 @@ def loadcsvfiletodb(conn, filepath_or_fileobj, table):
     return True
 
 
+def fillmanualtransactionform(thewindow, manualtransaction):
+    # window['-DAILYBALANCELISTTABLE-'](dailybalancelist)
+    '''
+
+    :param window:
+    :param manualtransaction:
+    :return:
+    '''
+    thewindow['-MANKEY-']('')
+    thewindow['-MANTRANS-']('')
+    thewindow['-MANDATE-']('')
+    thewindow['-MANCATEGORY-']('')
+    thewindow['-MANTYPE-']('')
+    thewindow['-MANAMOUNT-']('')
+
+    thewindow['-MANKEY-'](manualtransaction[0])
+    thewindow['-MANTRANS-'](manualtransaction[1])
+    thewindow['-MANDATE-'](manualtransaction[2])
+    thewindow['-MANCATEGORY-'](manualtransaction[3])
+    thewindow['-MANAMOUNT-'](manualtransaction[4])
+
+    thewindow.refresh
+
+def clearmanualtransactionform(thewindow):
+
+    thewindow['-MANKEY-']('')
+    thewindow['-MANTRANS-']('')
+    thewindow['-MANDATE-']('')
+    thewindow['-MANCATEGORY-']('')
+    thewindow['-MANAMOUNT-']('')
+    thewindow['-MANTYPE-']('')
+
+    thewindow.refresh
+
+def mangeneratetransid(window, adate):
+    manualkey = adate[:4] + adate[5:7] + adate[8:10]
+    manualkey = manualkey + '-' + str(random.randint(100000, 999999))
+    # window['-MANKEY-'](manualkey)
+    # window.refresh
+    # sg.Popup('thedate ->', thedate)
+    # sg.Popup('manualkey ->', manualkey)
+    return manualkey
+
+
 def main():
 
     if validatedatafile(my_db_file):
@@ -538,6 +644,7 @@ def main():
     # read in current transactions
 
     transactionlist = gettransactions(conn,'Transactionlist')
+    mantransactionlist = gettransactions(conn, 'ManualTransactionList')
 
     tablenamelist = gettablenames(conn)
     csvtablename = []
@@ -605,7 +712,7 @@ def main():
                          [sg.T('Start Date', size=(15, 1)), sg.T('End Date', size=(15, 1))],
                          [sg.In(str(summarystartdate), size=(17, 1),key='-SUMMARYSTARTDATE-'),
                           sg.In(str(summaryenddate), size=(17, 1), key='-SUMMARYENDDATE-'),
-                          sg.Button('Run CategoryReport', key=('-RUNCATEGORYREPORT-')),
+                          sg.Button('Run Category Report', key=('-RUNCATEGORYREPORT-')),
                           sg.Button('Run Daily Report', key=('-RUNDAILYREPORT-')),
                           sg.Button('Run Daily Balance', key=('-RUNDAILYBALANCEREPORT-'))],
                          [sg.CalendarButton('Calendar', target=(3, 0), size=(15, 1)),
@@ -628,10 +735,15 @@ def main():
                                     justification='right',
                                     display_row_numbers=True,
                                     alternating_row_color=mediumblue2,
-                                    num_rows=25,
+                                    num_rows=20,
                                     enable_events=True,
                                     tooltip='Transactions from bank',
-                                    key='-TRANSACTIONLISTBOX-')]
+                                    key='-TRANSACTIONLISTBOX-')],
+                            [sg.Text('Filename', justification='center', size=(25, 1))],
+                             [sg.Text('CSV File Name', justification='right', size=(15, 1)),
+                              sg.InputText(key='-CSVFILENAME-', size=(80, 1), enable_events=True),
+                              sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
+                             [sg.Button('Load CSV file and add new transactions', key='-LOADCSVFILE-', disabled=False)]
                             ]
 
     dailyspend_layout = [[sg.Button('Show spending graph', key=('-RUNSPENDGRAPH-'))],
@@ -661,7 +773,7 @@ def main():
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
-
+    '''
     newtranstabcol1_layout = [[sg.T('new newtrans tab')],
                           [sg.Listbox(tablenamelist, size=(30, 10) , enable_events=True, key='-TABLENAMELIST-')],
                           [sg.In(csvtablename, size=(30, 1), key='-CSVTABLENAME-')],
@@ -672,8 +784,38 @@ def main():
          sg.InputText(key='-CSVFILENAME-', size=(80, 1), enable_events=True),
          sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
         [sg.Button('Load CSV file and add new transactions', key='-LOADCSVFILE-', disabled=False)]]
+'''
 
-    newtranstab_layout = [[sg.Column(newtranstabcol1_layout), sg.Column(newtranstabcol2_layout)]]
+    # newtranstab_layout = [[sg.Column(newtranstabcol1_layout), sg.Column(newtranstabcol2_layout)]]
+    newtranstab_layout = [[sg.T('new trans tab')]]
+
+    mantranstabcol1_layout = [[sg.T('Manual Transaction List', \
+                                    size=(45, 1), justification='center')],
+                            [sg.Table(mantransactionlist,
+                                    headings=myheadings,
+                                    max_col_width=40,
+                                    auto_size_columns=True,
+                                    justification='right',
+                                    display_row_numbers=True,
+                                    alternating_row_color=mediumblue2,
+                                    num_rows=25,
+                                    enable_events=True,
+                                    tooltip='Manual Transactions',
+                                    key='-MANTRANSACTIONLISTBOX-')]
+                            ]
+    mantranstabcol2_layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(key='-MANKEY-', disabled=True, size=(40, 1))],
+              [sg.T('Transaction', size=(15, 1)), sg.In(key='-MANTRANS-', disabled=False, size=(40, 1))],
+              [sg.T('Date', size=(15, 1)), sg.In(key='-MANDATE-', disabled=True, size=(40, 1)),
+               sg.CalendarButton('Calendar', target=(2, 1), size=(10, 1),format='%Y-%m-%d')],
+              [sg.T('Amount', size=(15, 1)), sg.In(key='-MANAMOUNT-', disabled=False, size=(40, 1))],
+                              [sg.T('Type (Debit/Credit)',size=(15, 1)), sg.In(key='-MANTYPE-', disabled=False, size=(40, 1))],
+              [sg.T('Category', size=(15, 1)), sg.Combo(categorylist, default_value='',
+                      key='-MANCATEGORY-', enable_events=True, size=(40, 1))],
+              [sg.Button('Update', key='-MANUPDATE-'), sg.Button('New', key='-MANNEW-'),
+               sg.Button('Save New', key='-MANSAVENEW-'), sg.Button('Delete', key='-MANTRANSDELETE-')],
+              [sg.T("Save the changes")]]
+
+    manualtranstab_layout = [[sg.Column(mantranstabcol1_layout), sg.Column(mantranstabcol2_layout)]]
 
     mainscreenlayout = [
                         [sg.Menu(menu_def, )],
@@ -684,7 +826,8 @@ def main():
                                 [sg.Tab('Daily Spending Graph', dailyspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category Spending Graph', categoryspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
-                                [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)]
+                                [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)],
+                                [sg.Tab('Manual Transactions', manualtranstab_layout, background_color=charcoal)]
                                 ])
                         ],
                          [sg.InputText('Message Area', size=(110, 1), key='-MESSAGEAREA-', background_color='white')],
@@ -817,6 +960,39 @@ def main():
             # print('cscategory ->', cscategory)
             datesummarytransactions = filldstransactions(conn, dsdate)
             summarywindow(datesummarytransactions)
+
+        elif event == '-MANTRANSACTIONLISTBOX-':
+            rowid = int(values['-MANTRANSACTIONLISTBOX-'][0])
+            if fillmanualtransactionform(window, mantransactionlist[rowid]):
+                pass
+
+        elif event == '-MANSAVENEW-':
+            mankey = mangeneratetransid(window, values['-MANDATE-'])
+            # event, values = window.Read()
+            mantransinsert(conn, mankey, values['-MANTRANS-'], values['-MANDATE-'],
+                values['-MANAMOUNT-'], values['-MANTYPE-'], values['-MANCATEGORY-'][1])
+            mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
+            window.refresh
+
+        elif event == '-MANUPDATE-':
+            mantransupdate(conn,values['-MANKEY-'],values['-MANTRANS-'],values['-MANDATE-'],values['-MANAMOUNT-'],
+                    values['-MANTYPE-'], values['-MANCATEGORY-'][1])
+            mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
+            window.refresh
+
+        elif event == '-MANTRANSDELETE-':
+            mantransdelete(conn,values['-MANKEY-'])
+            clearmanualtransactionform(window)
+            mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
+            window.refresh
+
+        elif event == '-MANNEW-':
+            clearmanualtransactionform(window)
+            # window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
+            # window.refresh
 
         elif event == '-LOADCSVFILE-':
             # sg.Popup('this button is not yet implemented')
