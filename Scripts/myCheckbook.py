@@ -104,7 +104,14 @@ def editwindow(transactiondata, categorylist):
             break
 
         if event == '-EWSAVE-':
-            newcat.append(values['-EWCATEGORY-'][0])
+            if len(values['-EWCATEGORY-']) == 2:
+                # sg.Popup('Category3 ->', values['-MANCATEGORY-'])
+                ewcategory = values['-EWCATEGORY-'][0]
+            else:
+                # sg.Popup('Category? ->', values['-MANCATEGORY-'])
+                ewcategory = values['-EWCATEGORY-']
+
+            newcat.append(ewcategory)
             newcat.append(transactionkey)
             # sg.Popup('-EWCATEGORY_ ->', newcat, keep_on_top=True)
             editwindow.Close()
@@ -165,7 +172,7 @@ def runsql(conn, sqlstring, rowdata=None):
             return sqloutput
     except Error as e:
         print(e)
-        print('runsql FAILED(', rowdata, ')')
+        sg.Popup('runsql FAILED(', rowdata, ')')
         return None
 
 
@@ -276,6 +283,8 @@ def gettransactions(conn, tablename):
         for tr in range(len(newtranslist)):
             translist[tr].append(newtranslist[tr])
         # print('translist ->', translist)
+    else:
+        translist = []
 
     return translist
 
@@ -352,10 +361,10 @@ def mantransinsert(conn, transid, trans, date, amount, type, category):
     """
 
     datalst = [transid, trans, amount, date, type, category]
-    print('sqlstr ->', sqlstr)
-    print('datalst ->', datalst)
+    # print('sqlstr ->', sqlstr)
+    # print('datalst ->', datalst)
     sqloutput = runsql(conn, sqlstr, datalst)
-    print('sqloutput ->', sqloutput)
+    # print('sqloutput ->', sqloutput)
 
 
 
@@ -366,10 +375,10 @@ def mantransdelete(conn, transid):
     sqlstr = " DELETE FROM ManualTransactionList	WHERE Transaction_Id = ? ; "
 
     datalst = [transid]
-    print('sqlstr ->', sqlstr)
-    print('datalst ->', datalst)
+    # print('sqlstr ->', sqlstr)
+    # print('datalst ->', datalst)
     sqloutput = runsql(conn, sqlstr, datalst)
-    print('sqloutput ->', sqloutput)
+    # print('sqloutput ->', sqloutput)
 
 
 def appendnewtransactions(conn, tablename):
@@ -388,23 +397,32 @@ def fillcstransactions(conn, cscategory, start, end):
     :param cscategory:
     :return:
     '''
-    sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
-    sqlstr = sqlstr + ' from TransactionList '
+    sqlstr = ' SELECT Posted_Date, CombinedTransactionList.Trans, CombinedTransactionList.Amount, CombinedTransactionList.Category '
+    sqlstr = sqlstr + ' from CombinedTransactionList '
     sqlstr = sqlstr + 'WHERE (Category = \'' + cscategory + '\') AND (Posted_Date >= \'' + start + '\') AND (Posted_Date <= \'' + end + '\')'
     sqlstr = sqlstr + ' ORDER BY Posted_Date ;'
+
     # print('sqlstr  ->', sqlstr)
+
     sqloutput = runsql(conn, sqlstr)
-    sqloutput = [list(ele) for ele in sqloutput]
+    # sg.Popup('sqloutput ->', sqloutput)
+
+    if sqloutput is not None:
+        sqloutput = [list(ele) for ele in sqloutput]
     return sqloutput
 
 
 def filldstransactions(conn, dsdate):
-    sqlstr = ' SELECT Posted_Date, TransactionList.Trans, TransactionList.Amount, TransactionList.Category '
-    sqlstr = sqlstr + ' from TransactionList WHERE Posted_Date = \'' + dsdate + '\' ORDER BY Posted_Date ;'
-    #   ->', sqlstr)
+    sqlstr = ''' SELECT Posted_Date, CombinedTransactionList.Trans, CombinedTransactionList.Amount, 
+    CombinedTransactionList.Category from CombinedTransactionList WHERE Posted_Date = '''
+    sqlstr = sqlstr + ' \'' + dsdate + '\' ORDER BY Posted_Date ; '
+
     sqloutput = runsql(conn, sqlstr)
-    if len(sqloutput) > 1:
+
+    if len(sqloutput) > 0:
+        # sg.Popup('sqloutput ->', sqloutput)
         sqloutput = [list(ele) for ele in sqloutput]
+
     return sqloutput
 
 
@@ -428,21 +446,21 @@ def fillsummarylist(conn, summarystart=None, summaryend=None):
     # print('summarystartdate, summaryenddate ->', summarystart, summaryend )
 
     if summarystart is None:
-        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
+        sqlstr = 'SELECT CombinedTransactionList.Category, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
         sqlstr = sqlstr + ' GROUP By Category ORDER by sum(Amount);'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
-        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
+        sqlstr = 'SELECT CombinedTransactionList.Category, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
+        sqlstr = sqlstr + 'WHERE CombinedTransactionList.Posted_Date >= \'' + summarystart + \
                  '\'   GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
-        sqlstr = 'SELECT TransactionList.Category, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
-                 '\' AND  TransactionList.Posted_Date <= \'' + summaryend + '\''
+        sqlstr = 'SELECT CombinedTransactionList.Category, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
+        sqlstr = sqlstr + 'WHERE CombinedTransactionList.Posted_Date >= \'' + summarystart + \
+                 '\' AND  CombinedTransactionList.Posted_Date <= \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Category ORDER by sum(Amount);'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -466,21 +484,21 @@ def filldailysummarylist(conn, summarystart=None, summaryend=None):
     # print('summarystartdate, summaryenddate ->', summarystart, summaryend )
 
     if summarystart is None:
-        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Amount <= 0 GROUP By Posted_Date ORDER by Posted_Date;'
+        sqlstr = 'SELECT CombinedTransactionList.Posted_Date, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
+        sqlstr = sqlstr + 'WHERE CombinedTransactionList.Amount <= 0 GROUP By Posted_Date ORDER by Posted_Date;'
         sqloutput = runsql(conn, sqlstr)
 
     elif summaryend is None:
-        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
+        sqlstr = 'SELECT CombinedTransactionList.Posted_Date, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
+        sqlstr = sqlstr + 'WHERE CombinedTransactionList.Posted_Date >= \'' + summarystart + \
                  '\'   GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
 
     else:
-        sqlstr = 'SELECT TransactionList.Posted_Date, sum(TransactionList.Amount) FROM TransactionList '
-        sqlstr = sqlstr + 'WHERE TransactionList.Posted_Date >= \'' + summarystart + \
-                 '\' AND  TransactionList.Posted_Date <= \'' + summaryend + '\''
+        sqlstr = 'SELECT CombinedTransactionList.Posted_Date, sum(CombinedTransactionList.Amount) FROM CombinedTransactionList '
+        sqlstr = sqlstr + 'WHERE CombinedTransactionList.Posted_Date >= \'' + summarystart + \
+                 '\' AND  CombinedTransactionList.Posted_Date <= \'' + summaryend + '\''
         sqlstr = sqlstr + ' GROUP By Posted_Date ORDER by Posted_Date;'
         # print('sql string and data ->', sqlstr)
         sqloutput = runsql(conn, sqlstr)
@@ -604,6 +622,7 @@ def fillmanualtransactionform(thewindow, manualtransaction):
     thewindow['-MANAMOUNT-'](manualtransaction[4])
 
     thewindow.refresh
+    return True
 
 def clearmanualtransactionform(thewindow):
 
@@ -626,6 +645,46 @@ def mangeneratetransid(window, adate):
     return manualkey
 
 
+def reloadcombtransactionlist(conn):
+    sqlstr1 = ' DELETE FROM CombinedTransactionList ; '
+
+    sqlstr2 = '''
+    INSERT INTO CombinedTransactionList 
+    SELECT 
+    TransactionList.Transaction_Id, 
+    TransactionList.Trans, 
+    TransactionList.Amount, 
+    TransactionList.Posted_Date, 
+    TransactionList.type, 
+    TransactionList.Category
+    From TransactionList ; '''
+
+    sqlstr3 = '''
+    INSERT INTO CombinedTransactionList 
+    SELECT 
+    ManualTransactionList.Transaction_Id, 
+    ManualTransactionList.Trans, 
+    ManualTransactionList.Amount, 
+    ManualTransactionList.Posted_Date, 
+    ManualTransactionList.type, 
+    ManualTransactionList.Category
+    From ManualTransactionList ; '''
+
+    if runsql(conn, sqlstr1):
+        if runsql(conn, sqlstr2):
+            if runsql(conn, sqlstr3):
+                return True
+            else:
+                sg.Popup('sqlstr3 FAILED')
+                return False
+        else:
+            sg.Popup('sqlstr2 FAILED')
+            return False
+    else:
+        sg.Popup('sqlstr1 FAILED')
+        return False
+
+
 def main():
 
     if validatedatafile(my_db_file):
@@ -646,18 +705,19 @@ def main():
     transactionlist = gettransactions(conn,'Transactionlist')
     mantransactionlist = gettransactions(conn, 'ManualTransactionList')
 
-    tablenamelist = gettablenames(conn)
-    csvtablename = []
+    if reloadcombtransactionlist(conn):
+        combtransactionlist = gettransactions(conn, 'CombinedTransactionList')
+    else:
+        sg.Popup('reloadcombtransactionlist FAILED')
 
     summarylist = fillsummarylist(conn)
-
     summaryheadings = ['Category', 'Amount']
 
     summarystartdate = date.today() - datetime.timedelta(days=14)
     summaryenddate = date.today()
 
-    dailysummarylist = filldailysummarylist(conn)
     dailysummaryheadings = ['Day', 'Amount']
+    dailysummarylist = filldailysummarylist(conn)
     dailybalancelist = filldailybalancelist(conn)
 
     categorylist = getcategories(conn, 'Categories')
@@ -752,7 +812,20 @@ def main():
     categoryspend_layout = [[sg.Button('Show category graph', key=('-RUNCATEGORYGRAPH-'))],
                            [categorygraph]]
 
-    forecasttranstab_layout = [[sg.T('forecast transactions')]]
+    forecasttranstab_layout = [[sg.T('Forecast Transaction List',
+                                    size=(45, 1), justification='center')],
+                            [sg.Table(combtransactionlist,
+                                    headings=myheadings,
+                                    max_col_width=40,
+                                    auto_size_columns=True,
+                                    justification='right',
+                                    display_row_numbers=True,
+                                    alternating_row_color=mediumblue2,
+                                    num_rows=25,
+                                    enable_events=True,
+                                    tooltip='Manual Transactions',
+                                    key='-COMBTRANSACTIONLISTBOX-')]
+                            ]
 
     categorytabcol1_layout = [[sg.Table(categorylist,
                           headings=categoryheadings,
@@ -773,23 +846,7 @@ def main():
 
     categorytabcol_layout = [[sg.Column(categorytabcol1_layout), sg.Column(categorytabcol2_layout)]]
 
-    '''
-    newtranstabcol1_layout = [[sg.T('new newtrans tab')],
-                          [sg.Listbox(tablenamelist, size=(30, 10) , enable_events=True, key='-TABLENAMELIST-')],
-                          [sg.In(csvtablename, size=(30, 1), key='-CSVTABLENAME-')],
-                          [ sg.B('List Tables', key='-NEWTABLELIST-')]]
-
-    newtranstabcol2_layout = [[sg.Text('Filename', justification='center', size=(25, 1))],
-        [sg.Text('CSV File Name', justification='right', size=(15, 1)),
-         sg.InputText(key='-CSVFILENAME-', size=(80, 1), enable_events=True),
-         sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
-        [sg.Button('Load CSV file and add new transactions', key='-LOADCSVFILE-', disabled=False)]]
-'''
-
-    # newtranstab_layout = [[sg.Column(newtranstabcol1_layout), sg.Column(newtranstabcol2_layout)]]
-    newtranstab_layout = [[sg.T('new trans tab')]]
-
-    mantranstabcol1_layout = [[sg.T('Manual Transaction List', \
+    mantranstabcol1_layout = [[sg.T('Manual Transaction List',
                                     size=(45, 1), justification='center')],
                             [sg.Table(mantransactionlist,
                                     headings=myheadings,
@@ -803,12 +860,16 @@ def main():
                                     tooltip='Manual Transactions',
                                     key='-MANTRANSACTIONLISTBOX-')]
                             ]
+
     mantranstabcol2_layout = [[sg.T('Transaction ID', size=(15, 1)), sg.In(key='-MANKEY-', disabled=True, size=(40, 1))],
               [sg.T('Transaction', size=(15, 1)), sg.In(key='-MANTRANS-', disabled=False, size=(40, 1))],
               [sg.T('Date', size=(15, 1)), sg.In(key='-MANDATE-', disabled=True, size=(40, 1)),
                sg.CalendarButton('Calendar', target=(2, 1), size=(10, 1),format='%Y-%m-%d')],
               [sg.T('Amount', size=(15, 1)), sg.In(key='-MANAMOUNT-', disabled=False, size=(40, 1))],
-                              [sg.T('Type (Debit/Credit)',size=(15, 1)), sg.In(key='-MANTYPE-', disabled=False, size=(40, 1))],
+              [sg.T('Type', size=(15, 1)),
+               sg.Radio('Debit', '-MANRTYPE-', default=True, key='-MANRTYPED-', enable_events=True),
+               sg.Radio('Credit', '-MANRTYPE-', key='-MANRTYPEC-', enable_events=True),
+               sg.In('Debit', key='-MANTYPE-', disabled=True)],
               [sg.T('Category', size=(15, 1)), sg.Combo(categorylist, default_value='',
                       key='-MANCATEGORY-', enable_events=True, size=(40, 1))],
               [sg.Button('Update', key='-MANUPDATE-'), sg.Button('New', key='-MANNEW-'),
@@ -826,7 +887,7 @@ def main():
                                 [sg.Tab('Daily Spending Graph', dailyspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category Spending Graph', categoryspend_layout, background_color=charcoal)],
                                 [sg.Tab('Category', categorytabcol_layout, background_color=charcoal)],
-                                [sg.Tab('Get New Transactions', newtranstab_layout, background_color=charcoal)],
+                                [sg.Tab('Forecast Transactions', forecasttranstab_layout, background_color=charcoal)],
                                 [sg.Tab('Manual Transactions', manualtranstab_layout, background_color=charcoal)]
                                 ])
                         ],
@@ -868,6 +929,11 @@ def main():
                     transupdatethecategory(conn, thenewcategory)
                     ewcategorylist = ewgetcategories(conn, 'Categories')
                     transactionlist = gettransactions(conn, 'Transactionlist')
+                    if reloadcombtransactionlist(conn):
+                        combtransactionlist = gettransactions(conn, 'CombinedTransactionList')
+                    else:
+                        sg.Popup('reloadcombtransactionlist FAILED')
+
                     window['-TRANSACTIONLISTBOX-'](transactionlist)
                     window.Refresh()
             except:
@@ -957,7 +1023,7 @@ def main():
             rowid = int(values['-DAILYSUMMARYLISTTABLE-'][0])
             # sg.Popup('summary category ->', summarylist[rowid][0])
             dsdate = dailysummarylist[rowid][0]
-            # print('cscategory ->', cscategory)
+            # sg.Popup('dsdate ->', dsdate)
             datesummarytransactions = filldstransactions(conn, dsdate)
             summarywindow(datesummarytransactions)
 
@@ -969,23 +1035,62 @@ def main():
         elif event == '-MANSAVENEW-':
             mankey = mangeneratetransid(window, values['-MANDATE-'])
             # event, values = window.Read()
+            if values['-MANRTYPEC-']:
+                manamount = float(values['-MANAMOUNT-'])
+                if manamount < 0:
+                    manamount = manamount * -1
+            else:
+                manamount = float(values['-MANAMOUNT-'])
+                if manamount > 0:
+                    manamount = manamount * -1
+
             mantransinsert(conn, mankey, values['-MANTRANS-'], values['-MANDATE-'],
-                values['-MANAMOUNT-'], values['-MANTYPE-'], values['-MANCATEGORY-'][1])
+                manamount, values['-MANTYPE-'], values['-MANCATEGORY-'][1])
+            reloadcombtransactionlist(conn)
             mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-COMBTRANSACTIONLISTBOX-'](combtransactionlist)
             window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
             window.refresh
 
+        elif event == '-MANRTYPEC-':
+            window['-MANTYPE-']('Credit')
+            window.refresh
+
+        elif event == '-MANRTYPED-':
+            window['-MANTYPE-']('Debit')
+            window.refresh
+
         elif event == '-MANUPDATE-':
-            mantransupdate(conn,values['-MANKEY-'],values['-MANTRANS-'],values['-MANDATE-'],values['-MANAMOUNT-'],
-                    values['-MANTYPE-'], values['-MANCATEGORY-'][1])
+            if values['-MANRTYPEC-']:
+                manrtype = 'Credit'
+                manamount = float(values['-MANAMOUNT-'])
+                if manamount < 0:
+                    manamount = manamount * -1
+            else:
+                manrtype = 'Debit'
+                manamount = float(values['-MANAMOUNT-'])
+                if manamount > 0:
+                    manamount = manamount * -1
+            if len(values['-MANCATEGORY-']) == 3:
+                # sg.Popup('Category3 ->', values['-MANCATEGORY-'])
+                mancategory = values['-MANCATEGORY-'][1]
+            else:
+                # sg.Popup('Category? ->', values['-MANCATEGORY-'])
+                mancategory = values['-MANCATEGORY-']
+            mantransupdate(conn,values['-MANKEY-'],values['-MANTRANS-'],values['-MANDATE-'],manamount,
+                    manrtype, mancategory)
+            reloadcombtransactionlist(conn)
             mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-COMBTRANSACTIONLISTBOX-'](combtransactionlist)
             window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
             window.refresh
 
         elif event == '-MANTRANSDELETE-':
             mantransdelete(conn,values['-MANKEY-'])
             clearmanualtransactionform(window)
+            reloadcombtransactionlist(conn)
             mantransactionlist = gettransactions(conn, 'ManualTransactionList')
+            window['-COMBTRANSACTIONLISTBOX-'](combtransactionlist)
             window['-MANTRANSACTIONLISTBOX-'](mantransactionlist)
             window.refresh
 
